@@ -9,8 +9,9 @@ class CorruptedData(Exception):
         self.parsed_data = data_celaned
 
 
-# regexp unita di misura
+# util to regexp
 unit = r'(\(?(?:Ry|a\.u\.|bohr|\/|ang)+\)?(?:\^|\*\*)?\d*\)?)'
+atoms_name = r'(?:C|H|O|N)'
 
 # information of scf
 scf_set = dict(
@@ -31,8 +32,8 @@ scf_set = dict(
                     unit),
     r_treshold=r'^ *convergence threshold *= *(\d+.\d+E?-?\d*)',
     r_mixing=r'^ *mixing beta *= *([\d\.\+\-]+)',
-    r_apos=r'^ +(\d+) +(\w{1,2})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
-           '([\d\+\-\.]+) +\)')
+    r_apos=r'^ +(\d+) +({})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
+           '([\d\+\-\.]+) +\)'.format(atoms_name))
 
 # data of scf
 # TODO, the pressure calculation is not always carried out so it should be
@@ -72,7 +73,8 @@ bfgs_data_out = dict(
     r_cell_side_units=r'CELL_PARAMETERS \(([\w ]+)= ([\d\.\+\-]+)\)',
     r_cell_side=r'^ {2,3}([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$',
     r_apos_units=r'ATOMIC_POSITIONS \((.+)\)',
-    r_apos=r'^(\w{1,2}) +([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$')
+    r_apos=r'^({}) +([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$'
+                .format(atoms_name))
 
 # closing string:
 r_close = r'JOB DONE'
@@ -172,5 +174,9 @@ def bfgs_complete(text):
         if x[0] == conversion[int(y[1])]:
             simulation['atom'].append((y[0], x[0], x[1:], y[2:]))
         else:
+            print(text)
+            print(conversion)
+            print(x[0])
+            print(y[1])
             raise ValueError('Error in conversion step')
     return simulation
