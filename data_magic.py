@@ -102,7 +102,7 @@ def file_parser(file, log=None):
 
     if bfgs_calculation and not anomalous_stop:
         first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first] = complete_scf(first_scf)
+        simulations[first].update(complete_scf(first_scf))
 
         # recover of bfgs data
         bfgs_iterations_text, bfgs_last = filetext.split(bfgs_data['end'][0])
@@ -112,14 +112,14 @@ def file_parser(file, log=None):
         bfgs_iterations_text.append(bfgs_last)
 
         for i, j in enumerate(bfgs_iterations_text):
-            simulations[id_simulations[i + 1]] = bfgs_complete(j)
+            simulations[id_simulations[i + 1]].update(bfgs_complete(j))
 
     elif bfgs_calculation and anomalous_stop and \
             len(bfgs_data['end']) == 1:
         log.write('data corrupted this is bad\n')
 
         first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first] = complete_scf(first_scf)
+        simulations[first].update(complete_scf(first_scf))
 
         # recover of bfgs data
         bfgs_iterations_text, bfgs_last = filetext.split(bfgs_data['end'][0])
@@ -130,18 +130,18 @@ def file_parser(file, log=None):
 
         for i, j in enumerate(bfgs_iterations_text):
             try:
-                simulations[id_simulations[i + 1]] = bfgs_complete(j)
+                simulations[id_simulations[i + 1]].update(bfgs_complete(j))
             except CorruptedData as e:
                 log.write(str(e))
                 log.write('\n')
-                simulations[id_simulations[i + 1]] = e.parsed_data
+                simulations[id_simulations[i + 1]].update(e.parsed_data)
                 simulations[id_simulations[i + 1]]['damage'] = True
 
     elif len(bfgs_data['start']) == 1 and anomalous_stop and \
             len(bfgs_data['end']) == 0:
         log.write('data corrupted this is bad^2\n')
         first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first] = complete_scf(first_scf)
+        simulations[first].update(complete_scf(first_scf))
 
         # recover of bfgs data
         bfgs_iterations_text = filetext.split('number of scf cycles')
@@ -149,29 +149,32 @@ def file_parser(file, log=None):
 
         for i, j in enumerate(bfgs_iterations_text):
             try:
-                simulations[id_simulations[i + 1]] = bfgs_complete(j)
+                simulations[id_simulations[i + 1]].update(bfgs_complete(j))
             except CorruptedData as e:
                 log.write(str(e) + '\n')
                 if 'total_energy' in e.parsed_data:
                     log.write()
-                    simulations[id_simulations[i + 1]] = e.parsed_data
+                    simulations[id_simulations[i + 1]].update(e.parsed_data)
                     simulations[id_simulations[i + 1]]['damage'] = True
                 else:
-                    # some data in the next step are available, like new
-                    # atomic positions or something, but not the energy
-                    # so we discard it
-                    log.write(str(i) + '/' + str(len(id_simulations)) + '\n')
-                    log.write(j)
-                    simulations[id_simulations[i]]['damage_next'] = True
+                    raise ValueError('Somthing very bad happened')
+            except IndexError as e:
+                # some data in the next step are available, like new
+                # atomic positions or something, but not the energy
+                # so we discard it
+                log.write(str(i) + '/' + str(len(id_simulations)) + '\n')
+                log.write(j)
+                simulations[id_simulations[i]]['damage_next'] = True
 
     elif anomalous_stop:
         log.write('data corrupted this is very unlucky\n')
         try:
-            simulations[first] = complete_scf(filetext)
+            simulations[first].update(complete_scf(filetext))
         except CorruptedData as e:
+            log.write(str(e) + '\n')
             log.write(str(e))
             log.write('\n')
-            simulations[first] = e.parsed_data
+            simulations[first].update(e.parsed_data)
             simulations[first]['damage'] = True
 
     textfile.close()
