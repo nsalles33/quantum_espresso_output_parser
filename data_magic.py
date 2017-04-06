@@ -15,7 +15,7 @@ def debug(simulations, id_s):
 
 
 def file_parser(file, log=None):
-    if log == None:
+    if log is None:
         # if I put it as log default parameter the file is
         # always created
         log = open('file_parser.log', 'a')
