@@ -81,7 +81,7 @@ def file_parser(file, log=None):
                 bfgs_step = int(bfgs_step)
                 simulations[last]['bfgs_converged'] = True
             else:
-                bfgs_step = int(bfgs_data['nstep'])
+                bfgs_step = int(bfgs_data['nstep'][0])
                 simulations[last]['bfgs_converged'] = False
             if len(bfgs_data['recalculation']) == 1:
                 simulations[last]['recalculation'] = True
