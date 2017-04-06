@@ -51,6 +51,7 @@ def file_parser(file, log=None):
     simulations = {}
     for i, x in enumerate(id_simulations):
         simulations[x] = {}
+        simulations[x]['file'] = str(file)
         simulations[x]['first'] = id_simulations[0]
         simulations[x]['last'] = id_simulations[-1]
         simulations[x]['number'] = (i + 1, n_simulations)
