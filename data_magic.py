@@ -119,7 +119,7 @@ def file_parser(file, log=None):
             bfgs_iterations_text = filetext.split('number of scf cycles')
 
         bfgs_iterations_text.pop(0)
-        
+
         for i, j in enumerate(bfgs_iterations_text):
             try:
                 simulations[id_simulations[i + 1]].update(bfgs_complete(j))
@@ -151,6 +151,6 @@ def file_parser(file, log=None):
             simulations[first]['damage'] = True
 
     textfile.close()
-    debug(simulations, id_simulations[0])
+    # debug(simulations, id_simulations[0])
 
     return simulations
