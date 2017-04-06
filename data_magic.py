@@ -102,60 +102,31 @@ def file_parser(file, log=None):
     else:
         log.write('BFGS not present\n')
 
-    if bfgs_calculation and not anomalous_stop:
+    if bfgs_calculation:
         first_scf = filetext.split(bfgs_data['start'][0])[0]
         simulations[first].update(complete_scf(first_scf))
 
         # recover of bfgs data
-        bfgs_iterations_text, bfgs_last = filetext.split(bfgs_data['end'][0])
-        bfgs_iterations_text = bfgs_iterations_text.split('number of '
-                                                          'scf cycles')
+        try:
+            bfgs_iterations_text, bfgs_last = filetext. \
+                split(bfgs_data['end'][0])
+            bfgs_iterations_text = bfgs_iterations_text. \
+                split('number of scf cycles')
+            bfgs_iterations_text.append(bfgs_last)
+        except IndexError as e:
+            log.write(str(e))
+            log.write('split on end not found\n')
+            bfgs_iterations_text = filetext.split('number of scf cycles')
+
         bfgs_iterations_text.pop(0)
-        bfgs_iterations_text.append(bfgs_last)
-
-        for i, j in enumerate(bfgs_iterations_text):
-            simulations[id_simulations[i + 1]].update(bfgs_complete(j))
-
-    elif bfgs_calculation and anomalous_stop and \
-            len(bfgs_data['end']) == 1:
-        log.write('data corrupted this is bad\n')
-
-        first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first].update(complete_scf(first_scf))
-
-        # recover of bfgs data
-        bfgs_iterations_text, bfgs_last = filetext.split(bfgs_data['end'][0])
-        bfgs_iterations_text = bfgs_iterations_text.split('number of '
-                                                          'scf cycles')
-        bfgs_iterations_text.pop(0)
-        bfgs_iterations_text.append(bfgs_last)
-
-        for i, j in enumerate(bfgs_iterations_text):
-            try:
-                simulations[id_simulations[i + 1]].update(bfgs_complete(j))
-            except CorruptedData as e:
-                log.write(str(e))
-                log.write('\n')
-                simulations[id_simulations[i + 1]].update(e.parsed_data)
-                simulations[id_simulations[i + 1]]['damage'] = True
-
-    elif len(bfgs_data['start']) == 1 and anomalous_stop and \
-            len(bfgs_data['end']) == 0:
-        log.write('data corrupted this is bad^2\n')
-        first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first].update(complete_scf(first_scf))
-
-        # recover of bfgs data
-        bfgs_iterations_text = filetext.split('number of scf cycles')
-        bfgs_iterations_text.pop(0)
-
+        
         for i, j in enumerate(bfgs_iterations_text):
             try:
                 simulations[id_simulations[i + 1]].update(bfgs_complete(j))
             except CorruptedData as e:
                 log.write(str(e) + '\n')
                 if 'total_energy' in e.parsed_data:
-                    log.write()
+                    log.write('energy recovered')
                     simulations[id_simulations[i + 1]].update(e.parsed_data)
                     simulations[id_simulations[i + 1]]['damage'] = True
                 else:
@@ -168,7 +139,7 @@ def file_parser(file, log=None):
                 log.write(j)
                 simulations[id_simulations[i]]['damage_next'] = True
 
-    elif anomalous_stop:
+    else:
         log.write('data corrupted this is very unlucky\n')
         try:
             simulations[first].update(complete_scf(filetext))
