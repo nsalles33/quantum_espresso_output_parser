@@ -28,8 +28,9 @@ def file_parser(file, log=None):
         log.write('job ended uncorrectly\n')
         anomalous_stop = True
     else:
-        log.write('wut??\n')
-        exit()
+        log.write('wut?? THIS FILE IS NOT MENT TO BE PARSED\n')
+        # TODO raise an error wold be better
+        return {}
 
     # scopro quante energie sono presenti nel fine
     # ad ogni energia corrisponde una simulazione.
@@ -45,7 +46,8 @@ def file_parser(file, log=None):
         last = id_simulations[-1]
     else:
         log.write('no energy found very bad!!!!\n')
-        exit()
+        # TODO raise an error wold be better
+        return {}
 
     # simulation inizialization:
     simulations = {}
