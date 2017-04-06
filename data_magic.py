@@ -150,10 +150,19 @@ def file_parser(file, log=None):
             try:
                 simulations[id_simulations[i + 1]] = bfgs_complete(j)
             except CorruptedData as e:
-                log.write(str(e))
-                log.write('\n')
-                simulations[id_simulations[i + 1]] = e.parsed_data
-                simulations[id_simulations[i + 1]]['damage'] = True
+                log.write(str(e) + '\n')
+                if 'total_energy' in e.parsed_data:
+                    log.write()
+                    simulations[id_simulations[i + 1]] = e.parsed_data
+                    simulations[id_simulations[i + 1]]['damage'] = True
+                else:
+                    # some data in the next step are available, like new
+                    # atomic positions or something, but not the energy
+                    # so we discard it
+                    log.write(str(i) + '/' + str(len(id_simulations)) + '\n')
+                    log.write(j)
+                    simulations[id_simulations[i]]['damage_next'] = True
+
     elif anomalous_stop:
         log.write('data corrupted this is very unlucky\n')
         try:
