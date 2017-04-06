@@ -14,7 +14,11 @@ def debug(simulations, id_s):
         line()
 
 
-def file_parser(file, log=open('file_parser.log', 'a')):
+def file_parser(file, log=None):
+    if log == None:
+        # if I put it as log default parameter the file is
+        # always created
+        log = open('file_parser.log', 'a')
     textfile = open(file, 'r')
     filetext = textfile.read()
     if len(re.findall(r_close, filetext)) == 1:
