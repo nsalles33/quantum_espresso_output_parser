@@ -31,19 +31,19 @@ id_simulation:
         + id first simulation of the family
         + id last simulation of the family
         + number in the sequence (i, n_tot)
-		+ bli (bravais lattice index)
-		+ alat
-		+ unit_cell_volume
-		+ cell_side
-		+ natoms
-		+ nspecies
-		+ nelectrons
-		+ nksstates
-		+ cutoff
-		+ charge_cutoff
-		+ treshold
-		+ mixing
-		+ cell_side_units (TODO, it is alat)
+        + bli (bravais lattice index)
+        + alat
+        + unit_cell_volume
+        + cell_side
+        + natoms
+        + nspecies
+        + nelectrons
+        + nksstates
+        + cutoff
+        + charge_cutoff
+        + treshold
+        + mixing
+        + cell_side_units (TODO, it is alat)
         + atoms
         |     |
         |     + number of the atom
@@ -66,14 +66,14 @@ id_simulation:
         + alat of cell
         + total_energy
         + E_hartree
-		+ E_onelectron
-		+ E_xc
-		+ E_ewald
-		+ E_paw
-		+ stress_units
-		+ atom_description (pseudopotential, mass, etc)
-		+ stress_tesnsor 
-		+ pressure_tesnsor
+        + E_onelectron
+        + E_xc
+        + E_ewald
+        + E_paw
+        + stress_units
+        + atom_description (pseudopotential, mass, etc)
+        + stress_tesnsor 
+        + pressure_tesnsor
         
         if last:
         |
@@ -83,9 +83,9 @@ id_simulation:
         if damage :
         |
         + damage = True => energy ok, other data could be corrupted
-		|
-		+ damage_next = True => 
-			there is one more corrupted simulation in the file that has been discarded 
+        |
+        + damage_next = True => 
+            there is one more corrupted simulation in the file that has been discarded 
 ```
 # Read the log:
 YOU MUST DO IT!
