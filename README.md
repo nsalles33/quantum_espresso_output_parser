@@ -6,7 +6,15 @@ It is developed arround SCF + BFGS calculations so if other calculations are sup
 If options capable of forcing the calculation to continue even if there has been no convergence are active in the input file the code wont fail but the data of the steps that didn't converged could be unreliable. 
 
 # How to use it:
-you just need file_parser(file_name) function, in data_magic module.
+what you need is file_parser(file_name) function, in data_magic module (documentation in line).
+Furthermore you need to add the atoms name that you are going to use in the string atoms_name in 'parser.py'
+like:
+
+```
+atoms_name = r'(?:C|H|O|N)'
+atoms_name = r'(?:C|H|O|N|Ar)'
+```
+
 
 Apply me just apply it to all the files in a folder and give you the total result as a json with all the simulations.
 
