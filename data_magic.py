@@ -15,10 +15,15 @@ def debug(simulations, id_s):
 
 
 def file_parser(file, log=None):
+    """
+    file: name of the file as string
+    log: TextIOWrapper
+    output: dict with data (see README)
+    """
     if log is None:
         # if I put it as log default parameter the file is
         # always created
-        log = open('file_parser.log', 'a')
+        log = open('{}_parser.log'.format(file), 'a')
     textfile = open(file, 'r')
     filetext = textfile.read()
     if len(re.findall(r_close, filetext)) == 1:
@@ -104,7 +109,7 @@ def file_parser(file, log=None):
 
     if bfgs_calculation:
         first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first].update(complete_scf(first_scf))
+        simulations[first].update(scf_complete(first_scf))
 
         # recover of bfgs data
         try:
@@ -142,7 +147,7 @@ def file_parser(file, log=None):
     else:
         log.write('data corrupted this is very unlucky\n')
         try:
-            simulations[first].update(complete_scf(filetext))
+            simulations[first].update(scf_complete(filetext))
         except CorruptedData as e:
             log.write(str(e) + '\n')
             log.write(str(e))

@@ -30,7 +30,7 @@ scf_set = dict(
     r_cutoff=r'^ *kinetic-energy cutoff *= *([\d\.\+\-]+) *{}'.format(unit),
     r_charge_cutoff=r'^ *charge density cutoff *= *([\d\.\+\-]+) *{}'.format(
                     unit),
-    r_treshold=r'^ *convergence threshold *= *(\d+.\d+E?-?\d*)',
+    r_threshold=r'^ *convergence threshold *= *(\d+.\d+E?-?\d*)',
     r_mixing=r'^ *mixing beta *= *([\d\.\+\-]+)',
     r_apos=r'^ +(\d+) +({})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
            '([\d\+\-\.]+) +\)'.format(atoms_name))
@@ -80,7 +80,12 @@ bfgs_data_out = dict(
 r_close = r'JOB DONE'
 
 
-def complete_scf(text):
+def scf_complete(text):
+    """
+    given the output of a complete scf step it returns a dictionary
+    with all the data. The output MUST HAVE AT LEAST the '! energy'
+    line.
+    """
     simulation = {}
     for x in scf_set:
         data = re.findall(scf_set[x], text, re.MULTILINE)
@@ -141,6 +146,12 @@ def complete_scf(text):
 
 
 def bfgs_complete(text):
+    """
+    given the output of a complete bfgs step it returns a dictionary
+    with all the data. The output MUST HAVE AT LEAST the '! energy'
+    line.
+    """
+
     simulation = {}
     for x in scf_data_out:
         data = re.findall(scf_data_out[x], text, re.MULTILINE)
