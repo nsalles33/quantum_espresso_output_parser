@@ -8,9 +8,10 @@ If options capable of forcing the calculation to continue even if there has been
 # How to use it:
 what you need is file_parser(file_name) function, in data_magic module (documentation in line).
 Furthermore you need to add the atoms name that you are going to use in the string atoms_name in 'parser.py'
+
 like:
 
-```
+```python
 atoms_name = r'(?:C|H|O|N)'
 atoms_name = r'(?:C|H|O|N|Ar)'
 ```
