@@ -4,3 +4,4 @@
 *.in
 *.json
 *.sublime*
+test.py
