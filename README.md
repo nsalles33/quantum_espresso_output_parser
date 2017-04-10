@@ -41,7 +41,7 @@ id_simulation:
         + nksstates
         + cutoff
         + charge_cutoff
-        + treshold
+        + threshold
         + mixing
         + cell_side_units (TODO, it is alat)
         + atoms
