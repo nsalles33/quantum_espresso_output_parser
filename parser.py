@@ -1,5 +1,7 @@
 import re
 
+DEBUG = False
+
 
 class CorruptedData(Exception):
     def __init__(self, message, data):
@@ -185,9 +187,11 @@ def bfgs_complete(text):
         if x[0] == conversion[int(y[1])]:
             simulation['atom'].append((y[0], x[0], x[1:], y[2:]))
         else:
-            print(text)
-            print(conversion)
-            print(x[0])
-            print(y[1])
+            if DEBUG:
+                print('D - bfgs_complete')
+                print(text)
+                print(conversion)
+                print(x[0])
+                print(y[1])
             raise ValueError('Error in conversion step')
     return simulation
