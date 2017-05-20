@@ -109,9 +109,6 @@ def scf_complete(text):
         else:
             simulation[x[2:]] = data
 
-    # scf fix
-    # print('ATTENTION: POSITONS ARE ON Crystallographic axes')
-
     # the normalizations MUST BE DONE in the same order as the data are
     # collected becouse the first that fails will rise an error and all the
     # others wont be applied.
@@ -174,6 +171,13 @@ def bfgs_complete(text):
             simulation[x[2:]] = data.pop()
         else:
             simulation[x[2:]] = data
+
+    # normalization of cell side units
+    cell_side_units = simulation['cell_side_units'].split('=')
+    if len(cell_side_units) == 2:
+        if cell_side_units[0] == 'alat':
+            simulation['cell_side_units'] = cell_side_units[0]
+            simulation['alat'] = cell_side_units[1]
 
     # normalization of force and positions
     simulation['atom'] = []
