@@ -17,11 +17,13 @@ atoms_name = r'(?:C|H|O|N)'
 
 # information of scf
 scf_set = dict(
+    r_PWSCF_version=r'^ *Program PWSCF (.+) starts',
     r_pseudopotential=r'^ *file *([\w_\-\.]+\.UPF)',
     r_bli=r'^ *bravais-lattice index *= *(\d+)',
     r_alat=r'^ *lattice parameter \(alat\) *= *([\d\.\+\-]+) *{}'.format(unit),
     r_unit_cell_volume=r'^ *unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
                        unit),
+    r_cell_side_units=r' *crystal axes: \(cart. coord. in units of (alat)\)',
     r_cell_side=r' *a\((\d+)\) *= *\( *(-?[\d.]+) *(-?[\d.]+) *'
                 '(-?[\d.]+) *\)',
     r_natoms=r'^ *number of atoms/cell *= *(\d+)',
@@ -38,8 +40,10 @@ scf_set = dict(
            '([\d\+\-\.]+) +\)'.format(atoms_name))
 
 # data of scf
-# TODO, the pressure calculation is not always carried out so it should be
-# putted in another dictionary
+# TODO, the pressure calculation is carried out in different way
+# on different QE version
+# here we have the most common version
+
 scf_data_out = dict(
     r_total_energy=r'^![\w =]+([\d\.\+\- ]+){}'.format(unit),
     r_E_hartree=r'^ +hartree \w+ += +([\d\.\+\-]+) +{}'.format(unit),
@@ -56,10 +60,13 @@ scf_data_out = dict(
                              r'([\d\.\+\-]+) +([\d\.\+\-]+)$')
 
 # information of BFGS
+# obs:
+# * criteria are present only if the bfgs converged
+# * nstep = maximimu nuber of step in BFGS
 bfgs_set = dict(
     r_bfgs_converged=r' +bfgs converged in +(\d+) +scf cycles and +(\d+) +'
                      'bfgs steps',
-    t_bfgs_not_converged=r'^ +The maximum number of steps has been reached.',
+    r_bfgs_not_converged=r'^ +The maximum number of steps has been reached.',
     r_criteria=r'^ +\(criteria: +(energy) < ([\d\.\+\-E]+),'
                ' +(force) < ([\d\.\+\-E]+),'
                ' +(cell) < ([\d\.\+\-E]+)\)',
@@ -72,7 +79,7 @@ bfgs_set = dict(
 bfgs_data_out = dict(
     r_unit_cell_volume=r'^ *new unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
                        unit),
-    r_cell_side_units=r'CELL_PARAMETERS \(([\w ]+)= +([\d\.\+\-]+)\)',
+    r_cell_side_units=r'CELL_PARAMETERS \(([\w ]+= +[\d\.\+\-]+|bohr)\)',
     r_cell_side=r'^ {2,3}([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$',
     r_apos_units=r'ATOMIC_POSITIONS \((.+)\)',
     r_apos=r'^({}) +([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$'
