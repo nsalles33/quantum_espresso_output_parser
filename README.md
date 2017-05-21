@@ -17,7 +17,7 @@ atoms_name = r'(?:C|H|O|N|Ar)'
 ```
 
 
-Apply me just apply it to all the files in a folder and give you the total result as a json with all the simulations.
+Apply me just apply it to all the files in a folder and give you the total result as a json with all the simulations. Apply me require some modification for your particular situation.
 
 
 
@@ -91,9 +91,11 @@ id_simulation:
         + atom_description
         |   |
         |   + atomic specie
-        |   + value
-        |   + mass
-        |   + pseudopotential file
+        |   |   |
+        |   |   + index in simulation
+        |   |   + valence
+        |   |   + mass
+        |   |   + pseudopotential file
         + stress_tesnsor 
         + pressure_tesnsor
         
