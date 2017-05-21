@@ -1,5 +1,5 @@
 import re
-import uuid
+import hashlib
 from parser import *
 
 
@@ -28,134 +28,119 @@ def file_parser(file, log=None):
     filetext = textfile.read()
     if len(re.findall(r_close, filetext)) == 1:
         log.write('job eneded correctly\n')
-        anomalous_stop = False
     elif len(re.findall(r_close, filetext)) == 0:
         log.write('job ended uncorrectly\n')
-        anomalous_stop = True
     else:
         log.write('wut?? THIS FILE IS NOT MENT TO BE PARSED\n')
         # TODO raise an error wold be better
         return {}
 
-    # scopro quante energie sono presenti nel fine
-    # ad ogni energia corrisponde una simulazione.
-    # questo l'ho deciso io, tutti gli altri dati sono "opzionali"
+    # how many energies are in the file?
+    # 1 energy => 1 simulation.
+    # 0 energy => no simulation.
+    # 1+ energies => error.
     matches = [x for x in re.findall(scf_data_out['r_total_energy'], filetext,
                                      re.MULTILINE)]
     if len(matches) != 0:
         n_simulations = len(matches)
-        id_simulations = tuple([str(uuid.uuid4())
-                                for x in range(len(matches))])
         log.write('{} simulations found\n'.format(n_simulations))
-        first = id_simulations[0]
-        last = id_simulations[-1]
     else:
         log.write('no energy found very bad!!!!\n')
         # TODO raise an error wold be better
         return {}
 
-    # simulation inizialization:
+    # simulation initialization:
     simulations = {}
-    for i, x in enumerate(id_simulations):
-        simulations[x] = {}
-        simulations[x]['file'] = str(file)
-        simulations[x]['first'] = id_simulations[0]
-        simulations[x]['last'] = id_simulations[-1]
-        simulations[x]['number'] = (i + 1, n_simulations)
-        if i != 0:
-            simulations[x]['previous'] = id_simulations[i - 1]
-        if i != n_simulations - 1:
-            simulations[x]['next'] = id_simulations[i + 1]
 
-    # carico i dati di bfgs -> passaggio necessario solo per bfgs:
-    bfgs_data = {}
-    bfgs_calculation = False
-    for x in bfgs_set:
-        data = re.findall(bfgs_set[x], filetext, re.MULTILINE)
-        bfgs_data[x[2:]] = data
-    if len(bfgs_data['start']) == 1:
-        bfgs_calculation = True
-        if len(bfgs_data['end']) == 1:
-            log.write('the bfgs algorithm ended\n')
-            bfgs_anomalous_stop = False
-        else:
-            log.write('the bfgs algorithm didn \'t end due to problems\n')
-            bfgs_anomalous_stop = True
-        if not bfgs_anomalous_stop:
-            if len(bfgs_data['bfgs_not_converged']) == 0:
-                scf_step, bfgs_step = bfgs_data['bfgs_converged'][0]
-                scf_step = int(scf_step)
-                bfgs_step = int(bfgs_step)
-                simulations[last]['bfgs_converged'] = True
+    if_bfgs, split_text = find_bfgs(filetext)
+
+    if if_bfgs:
+        for i, v in enumerate(split_text):
+            kind, text = v
+            simulation = {}
+            valid_simulation = True
+            damage_simulation = False
+            if kind == 'scf':
+                try:
+                    simulation.update(scf_complete(text))
+                except CorruptedData as e:
+                    log.write(str(e) + '\n')
+                    if 'total_energy' in e.parsed_data:
+                        log.write('energy recovered')
+                        simulation.update(e.parsed_data)
+                        simulation['damage'] = True
+                        damage_simulation = True
+                    else:
+                        valid_simulation = False
+            elif kind == 'bfgs':
+                try:
+                    simulation.update(bfgs_complete(text))
+                except CorruptedData as e:
+                    log.write(str(e) + '\n')
+                    if 'total_energy' in e.parsed_data:
+                        log.write('energy recovered')
+                        simulation.update(e.parsed_data)
+                        simulation['damage'] = True
+                        damage_simulation = True
+                    else:
+                        valid_simulation = False
             else:
-                bfgs_step = int(bfgs_data['nstep'][0])
-                simulations[last]['bfgs_converged'] = False
-            if len(bfgs_data['recalculation']) == 1:
-                simulations[last]['recalculation'] = True
-        else:
-            try:
-                scf_step_started = int(
-                    re.findall(r'^ +number of scf cycles += +(\d+)', filetext,
-                               re.MULTILINE)[-1])
-                bfgs_step_started = int(
-                    re.findall(r'^ +number of bfgs steps += +(\d+)', filetext,
-                               re.MULTILINE)[-1])
-            except IndexError:
-                log.write('who cares, everything should work '
-                          'anyway without this data\n')
+                raise ValueError('kind not implemented')
+
+            # be careful: key here is the key of the previous simulation!
+            if not valid_simulation:
+                for k, v in simulations.items():
+                    v['last'] = key
+                break
+
+            # i = 0 does not have a previous key
+            if i > 0:
+                previous_key = key
+
+            key = hashlib.sha224(text.encode('utf-8')).hexdigest()
+
+            # key manager among the simulation
+            if i == 0:
+                simulations[key] = dict(file=str(file),
+                                        firts=key,
+                                        number=(i, len(split_text) - 1))
+                simulations[key].update(simulation)
+                first_key = key
+            elif (i == len(split_text) - 1) or damage_simulation:
+                simulations[previous_key]['next'] = key
+                for k, v in simulations.items():
+                    v['last'] = key
+                simulations[key] = dict(file=str(file),
+                                        first=first_key,
+                                        number=(i, len(split_text) - 1),
+                                        previous=previous_key,
+                                        last=key)
+                simulations[key].update(simulation)
+                break
+            else:
+                simulations[key] = dict(file=str(file),
+                                        first=first_key,
+                                        number=(i, len(split_text) - 1),
+                                        previous=previous_key)
+                simulations[key].update(simulation)
+                simulations[previous_key]['next'] = key
 
     else:
-        log.write('BFGS not present\n')
-
-    if bfgs_calculation:
-        first_scf = filetext.split(bfgs_data['start'][0])[0]
-        simulations[first].update(scf_complete(first_scf))
-
-        # recover of bfgs data
+        log.write('no bfgs calculation founded\n')
+        kind, text = split_text[0]
+        key = hashlib.sha224(text.encode('utf-8')).hexdigest()
+        simulations[key] = dict(file=str(file),
+                                firts=key,
+                                last=key,
+                                number=(0, 0))
         try:
-            bfgs_iterations_text, bfgs_last = filetext. \
-                split(bfgs_data['end'][0])
-            bfgs_iterations_text = bfgs_iterations_text. \
-                split('number of scf cycles')
-            bfgs_iterations_text.append(bfgs_last)
-        except IndexError as e:
-            log.write(str(e))
-            log.write('split on end not found\n')
-            bfgs_iterations_text = filetext.split('number of scf cycles')
-
-        bfgs_iterations_text.pop(0)
-
-        for i, j in enumerate(bfgs_iterations_text):
-            try:
-                simulations[id_simulations[i + 1]].update(bfgs_complete(j))
-            except CorruptedData as e:
-                log.write(str(e) + '\n')
-                if 'total_energy' in e.parsed_data:
-                    log.write('energy recovered')
-                    simulations[id_simulations[i + 1]].update(e.parsed_data)
-                    simulations[id_simulations[i + 1]]['damage'] = True
-                else:
-                    raise ValueError('Somthing very bad happened')
-            except IndexError as e:
-                # some data in the next step are available, like new
-                # atomic positions or something, but not the energy
-                # so we discard it
-                log.write(str(i) + '/' + str(len(id_simulations)) + '\n')
-                log.write(j)
-                simulations[id_simulations[i]]['damage_next'] = True
-
-    else:
-        log.write('data corrupted this is very unlucky\n')
-        try:
-            simulations[first].update(scf_complete(filetext))
+            simulations[key].update(scf_complete(text))
         except CorruptedData as e:
             log.write(str(e) + '\n')
-            log.write(str(e))
-            log.write('\n')
-            simulations[first].update(e.parsed_data)
-            simulations[first]['damage'] = True
-
+            if 'total_energy' in e.parsed_data:
+                log.write('energy recovered')
+                simulation.update(e.parsed_data)
+                simulation['damage'] = True
     textfile.close()
-    # debug(simulations, id_simulations[0])
-
+    debug(simulations, id_simulations[0])
     return simulations
