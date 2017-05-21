@@ -92,6 +92,90 @@ bfgs_data_out = dict(
 r_close = r'JOB DONE'
 
 
+def find_bfgs(text, verbose=False):
+    """
+    given a full file check if it is a bfgs caluclation and if it is true
+    it splits the text in a vector of single calculation
+    output:
+    if_bfgs, [('scf','text'),[ ('bfgs','text'),..]
+    if verbose is True the ouput will contain extra info in a dict:
+        bfgs_error = bool
+        bfgs_converged = bool
+        --- if bfgs_converged = True
+        energy < value
+        force < value
+        cell < value
+        -------------
+        bfgs_final_scf = bool
+
+    """
+    bfgs_data = {}
+    verbose_dict = {}
+    for x in bfgs_set:
+        data = re.findall(bfgs_set[x], text, re.MULTILINE)
+        bfgs_data[x[2:]] = data
+
+    # check if a BFGS calculation is present.
+    if len(bfgs_data['start']) == 1:
+        if_bfgs = True
+    else:
+        if_bfgs = False
+        if verbose:
+            return if_bfgs, [('scf', text)], verbose_dict
+        else:
+            return if_bfgs, [('scf', text)]
+
+    # split the data in several calculation:
+    split_data = []
+    # first scf calculation
+    tmp = re.split(bfgs_set['r_start'], text, flags=re.MULTILINE)
+    split_data.append(('scf', tmp[0]))
+    tmp = tmp[1]
+    # final scf calculation
+    if len(bfgs_data['final_scf']) == 1:
+        tmp = re.split(bfgs_set['r_final_scf'], tmp, flags=re.MULTILINE)
+        bfgs_text = tmp[0]
+        scf_last_text = tmp[1]
+    # final set of coordinate:
+    # this is useless because those data are founded again in the last scf step
+    if len(bfgs_data['end']) == 1:
+        tmp = re.split(bfgs_set['r_end'], bfgs_text, flags=re.MULTILINE)
+        bfgs_text = tmp[0]
+        # enable this line to get data from 'end of bfgs' to 'a final scf'
+        # last_coordinate = tmp[1]
+    # division of all the oter steps
+    bfgs_text = re.split(bfgs_set['r_bfgs_split'], bfgs_text,
+                         flags=re.MULTILINE)
+    # remove first line if not too long( usually it is just a set of blank
+    # spaces)
+    if len(bfgs_text[0]) < 30:
+        bfgs_text.pop(0)
+    bfgs_text = ['number of scf cycles' + x for x in bfgs_text]
+
+    # put all the split data in the right vector
+    for x in bfgs_text:
+        split_data.append(('bfgs', x))
+
+    if len(bfgs_data['end']) == 1:
+        verbose_dict['bfgs_error'] = False
+        verbose_dict['bfgs_converged'] = True if \
+            len(bfgs_data['bfgs_converged']) >= 1 else False
+        if verbose_dict['bfgs_converged']:
+            verbose_dict[bfgs_data['criteria'][0]] = bfgs_data['criteria'][1]
+            verbose_dict[bfgs_data['criteria'][2]] = bfgs_data['criteria'][3]
+            verbose_dict[bfgs_data['criteria'][4]] = bfgs_data['criteria'][5]
+    else:
+        verbose_dict['bfgs_error'] = True
+
+    if len(bfgs_data['final_scf']) == 1:
+        split_data.append(('scf', scf_last_text))
+
+    if verbose:
+        return if_bfgs, split_data, verbose_dict
+    else:
+        return if_bfgs, split_data
+
+
 def scf_complete(text):
     """
     given the output of a complete scf step it returns a dictionary
