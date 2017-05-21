@@ -64,6 +64,8 @@ scf_data_out = dict(
 # * criteria are present only if the bfgs converged
 # * nstep = maximimu nuber of step in BFGS
 bfgs_set = dict(
+    r_nstep=r'^ *nstep *= *(\d+)',
+    r_start=r'^ +BFGS Geometry Optimization',
     r_bfgs_converged=r' +bfgs converged in +(\d+) +scf cycles and +(\d+) +'
                      'bfgs steps',
     r_bfgs_not_converged=r'^ +The maximum number of steps has been reached.',
@@ -71,12 +73,13 @@ bfgs_set = dict(
                ' +(force) < ([\d\.\+\-E]+),'
                ' +(cell) < ([\d\.\+\-E]+)\)',
     r_end=r'^ +End of BFGS Geometry Optimization',
-    r_start=r'^ +BFGS Geometry Optimization',
-    r_nstep=r'^ *nstep *= *(\d+)',
-    r_recalculation=r'The G-vectors are recalculated for the final unit cell')
+    r_final_scf=r'^ *A final scf calculation at the relaxed structure',
+    r_bfgs_split=r'number of scf cycles')
 
 # data of bfgs:
 bfgs_data_out = dict(
+    r_scf_cycles=r'^ *number of scf cycles *= *(\d+)',
+    r_bfgs_steps=r'^ *number of bfgs steps *= *(\d+)',
     r_unit_cell_volume=r'^ *new unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
                        unit),
     r_cell_side_units=r'CELL_PARAMETERS \(([\w ]+= +[\d\.\+\-]+|bohr)\)',
