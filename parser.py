@@ -12,13 +12,14 @@ class CorruptedData(Exception):
 
 
 # util to regexp
-unit = r'(\(?(?:Ry|a\.u\.|bohr|\/|ang)+\)?(?:\^|\*\*)?\d*\)?)'
+unit = r'((?:Ry|a\.u\.|(?:b|B)ohr|\/|ang|kbar)+\)?(?:\^|\*\*)?\d*)'
 atoms_name = r'(?:C|H|O|N)'
 
 # information of scf
 scf_set = dict(
     r_PWSCF_version=r'^ *Program PWSCF (.+) starts',
-    r_pseudopotential=r'^ *file *([\w_\-\.]+\.UPF)',
+    r_pseudopotential=r'^ *PseudoPot. # (\d+) for *(\w{1,2})'
+                      r' *read from file:\n^ *(.+\.UPF)$',
     r_bli=r'^ *bravais-lattice index *= *(\d+)',
     r_alat=r'^ *lattice parameter \(alat\) *= *([\d\.\+\-]+) *{}'.format(unit),
     r_unit_cell_volume=r'^ *unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
@@ -69,9 +70,9 @@ bfgs_set = dict(
     r_bfgs_converged=r' +bfgs converged in +(\d+) +scf cycles and +(\d+) +'
                      'bfgs steps',
     r_bfgs_not_converged=r'^ +The maximum number of steps has been reached.',
-    r_criteria=r'^ +\(criteria: +(energy) < ([\d\.\+\-E]+),'
-               ' +(force) < ([\d\.\+\-E]+),'
-               ' +(cell) < ([\d\.\+\-E]+)\)',
+    r_criteria=r'^ +\(criteria: +(energy) *< *([\d\.\+\-E]+) *{},'
+               r' +(force) *< *([\d\.\+\-E]+) *{},'
+               r' +(cell) *< *([\d\.\+\-E]+) *{} *\)'.format(unit, unit, unit),
     r_end=r'^ +End of BFGS Geometry Optimization',
     r_final_scf=r'^ *A final scf calculation at the relaxed structure',
     r_bfgs_split=r'number of scf cycles')
@@ -134,17 +135,19 @@ def find_bfgs(text, verbose=False):
     # final scf calculation
     if len(bfgs_data['final_scf']) == 1:
         tmp = re.split(bfgs_set['r_final_scf'], tmp, flags=re.MULTILINE)
-        bfgs_text = tmp[0]
         scf_last_text = tmp[1]
+        # data for next step
+        tmp = tmp[0]
     # final set of coordinate:
     # this is useless because those data are founded again in the last scf step
     if len(bfgs_data['end']) == 1:
-        tmp = re.split(bfgs_set['r_end'], bfgs_text, flags=re.MULTILINE)
-        bfgs_text = tmp[0]
+        tmp = re.split(bfgs_set['r_end'], tmp, flags=re.MULTILINE)
         # enable this line to get data from 'end of bfgs' to 'a final scf'
         # last_coordinate = tmp[1]
+        # data for next step
+        tmp = tmp[0]
     # division of all the oter steps
-    bfgs_text = re.split(bfgs_set['r_bfgs_split'], bfgs_text,
+    bfgs_text = re.split(bfgs_set['r_bfgs_split'], tmp,
                          flags=re.MULTILINE)
     # remove first line if not too long( usually it is just a set of blank
     # spaces)
@@ -161,6 +164,9 @@ def find_bfgs(text, verbose=False):
         verbose_dict['bfgs_converged'] = True if \
             len(bfgs_data['bfgs_converged']) >= 1 else False
         if verbose_dict['bfgs_converged']:
+            print(bfgs_set['r_criteria'])
+            print(bfgs_data['criteria'])
+            bfgs_data['criteria'] = bfgs_data['criteria'][0]
             verbose_dict[bfgs_data['criteria'][0]] = bfgs_data['criteria'][1]
             verbose_dict[bfgs_data['criteria'][2]] = bfgs_data['criteria'][3]
             verbose_dict[bfgs_data['criteria'][4]] = bfgs_data['criteria'][5]
@@ -201,13 +207,18 @@ def scf_complete(text):
     # others wont be applied.
 
     # normalization of atom description
-    simulation['atom_description'] = []
+    simulation['atom_description'] = {}
     for x, y in zip(simulation.pop('dspecies'),
                     simulation.pop('pseudopotential')):
-        simulation['atom_description'].append((x[0], x[1], x[2], y))
+        if x[0] == y[1]:
+            pseudo_name = y[2].split('/')[-1]
+            simulation['atom_description'][y[1]] = (y[0], x[1], x[2],
+                                                    pseudo_name)
+        else:
+            raise ValueError('Inconsistency in QE output')
 
-    conversion = {i + 1: x[0] for i, x in
-                  enumerate(simulation['atom_description'])}
+    conversion = {int(v[0]): k for k, v in
+                  simulation['atom_description'].items()}
 
     # normalization of cell description
     cell_side = simulation.pop('cell_side')
@@ -218,6 +229,7 @@ def scf_complete(text):
     nat = int(simulation['natoms'])
     pos = simulation.pop('apos')[nat:]
     force = simulation.pop('force')[:nat]
+
     if len(force) < nat:
         # try to save as much data as possible
         for x in pos:
