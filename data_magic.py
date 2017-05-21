@@ -139,8 +139,8 @@ def file_parser(file, log=None):
             log.write(str(e) + '\n')
             if 'total_energy' in e.parsed_data:
                 log.write('energy recovered')
-                simulation.update(e.parsed_data)
-                simulation['damage'] = True
+                simulations[key].update(e.parsed_data)
+                simulations[key]['damage'] = True
     textfile.close()
-    debug(simulations, id_simulations[0])
+    # debug(simulations, id_simulations[0])
     return simulations
