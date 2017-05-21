@@ -164,8 +164,6 @@ def find_bfgs(text, verbose=False):
         verbose_dict['bfgs_converged'] = True if \
             len(bfgs_data['bfgs_converged']) >= 1 else False
         if verbose_dict['bfgs_converged']:
-            print(bfgs_set['r_criteria'])
-            print(bfgs_data['criteria'])
             bfgs_data['criteria'] = bfgs_data['criteria'][0]
             verbose_dict[bfgs_data['criteria'][0]] = bfgs_data['criteria'][1]
             verbose_dict[bfgs_data['criteria'][2]] = bfgs_data['criteria'][3]
@@ -272,7 +270,10 @@ def bfgs_complete(text):
             simulation[x[2:]] = data
 
     # normalization of cell side units
-    cell_side_units = simulation['cell_side_units'].split('=')
+    try:
+        cell_side_units = simulation['cell_side_units'][0].split('=')
+    except IndexError:
+        raise CorruptedData('no cell_side_units', simulation)
     if len(cell_side_units) == 2:
         if cell_side_units[0] == 'alat':
             simulation['cell_side_units'] = cell_side_units[0]
