@@ -33,8 +33,26 @@ id_simulation:
         + number in the sequence (i, n_tot)
         + bli (bravais lattice index)
         + alat
+        |   |
+        |   # available only in SCF,
+        |   # bfgs depends on input setting
+        |   + value
+        |   + units
         + unit_cell_volume
+        |   |
+        |   + value
+        |   + units
+        + cell_side_units
+        |   |
+        |   # if not available the error is due
+        |   # to unexpected value on
+        |   # QE output.
         + cell_side
+        |   |
+        |   # units of alat, not specified
+        |   + a1
+        |   + a1
+        |   + a3
         + natoms
         + nspecies
         + nelectrons
@@ -43,7 +61,6 @@ id_simulation:
         + charge_cutoff
         + threshold
         + mixing
-        + cell_side_units (TODO, it is alat)
         + atoms
         |     |
         |     + number of the atom
@@ -71,7 +88,12 @@ id_simulation:
         + E_ewald
         + E_paw
         + stress_units
-        + atom_description (pseudopotential, mass, etc)
+        + atom_description
+        |   |
+        |   + atomic specie
+        |   + value
+        |   + mass
+        |   + pseudopotential file
         + stress_tesnsor 
         + pressure_tesnsor
         
