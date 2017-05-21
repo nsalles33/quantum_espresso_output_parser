@@ -2,9 +2,9 @@ import json
 import os
 from data_magic import *
 simulationsData = []
-mypath = '.'
+mypath = './new_test'
 files = [os.path.join(mypath, f) for f in os.listdir(mypath) if
-         os.path.isfile(os.path.join(mypath, f)) if f.endswith('output')]
+         os.path.isfile(os.path.join(mypath, f)) if f.startswith('output')]
 
 summa = {}
 log = open('logger.log', 'a')
