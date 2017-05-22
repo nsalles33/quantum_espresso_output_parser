@@ -315,14 +315,14 @@ def scf_complete(text):
     line.
     """
     simulation = {}
-    for x in scf_set:
-        data = re.findall(scf_set[x], text, re.MULTILINE)
+    for x in scf_input:
+        data = re.findall(scf_input[x], text, re.MULTILINE)
         if len(data) == 1:
             simulation[x[2:]] = data.pop()
         else:
             simulation[x[2:]] = data
-    for x in scf_data_out:
-        data = re.findall(scf_data_out[x], text, re.MULTILINE)
+    for x in scf_output:
+        data = re.findall(scf_output[x], text, re.MULTILINE)
         if len(data) == 1:
             simulation[x[2:]] = data.pop()
         else:
