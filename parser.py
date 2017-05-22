@@ -192,6 +192,122 @@ def find_bfgs(text, verbose=False):
         return if_bfgs, split_data
 
 
+def scf_in(text, scf_out_feeder=False):
+    """
+    given data of SCF calculation output return all the data of that simulation
+    raise several error if something went wrong,
+    """
+    simulation = {}
+    for x in scf_input:
+        data = re.findall(scf_input[x], text, re.MULTILINE)
+        if len(data) == 1:
+            simulation[x[2:]] = data.pop()
+        else:
+            simulation[x[2:]] = data
+
+    # normalization of cell description
+    cell_side = simulation.pop('cell_side')
+    simulation['cell_side'] = [x[1:] for x in cell_side]
+
+    # normalization of atom description
+    simulation['atom_description'] = {}
+    for x, y in zip(simulation.pop('dspecies'),
+                    simulation.pop('pseudopotential')):
+        if x[0] == y[1]:
+            pseudo_name = y[2].split('/')[-1]
+            simulation['atom_description'][y[1]] = (y[0], x[1], x[2],
+                                                    pseudo_name)
+        else:
+            raise ValueError('Inconsistency in QE output')
+    if len(simulation['atom_description']) < simulation['nspecies']:
+        raise CorruptedData('some atom are not well described', simulation,
+                            'atom_description')
+
+    # creating the conversion table
+    conversion = {int(v[0]): k for k, v in
+                  simulation['atom_description'].items()}
+    # number of atom:
+    nat = int(simulation['natoms'])
+
+    # normalization of atomic positions, this part should be done better
+    # idea: force a division on work cristallographic axes
+    crystal_text = re.split(scf_input_cryst['r_cryst_split_begin'],
+                            text, flags=re.MULTILINE)[1]
+    crystal_text = re.split(scf_input_cryst['r_cryst_split_end'],
+                            crystal_text, flags=re.MULTILINE)[0]
+    a_pos = re.findall(scf_input_cryst['r_apos'],
+                       crystal_text,
+                       re.MULTILINE)
+    if len(a_pos) < nat:
+        raise CorruptedData('some position are missing', simulation,
+                            'atom_position')
+
+    if scf_out_feeder:
+        return (text, nat, conversion, a_pos, simulation)
+    else:
+        return simulation
+
+
+def scf_out(text, nat, atom_conversion, positions, simulation={}):
+    """
+    given data of SCF calculation output return all the data of that simulation
+    raise several error if something went wrong,
+    nat: number of atom
+    atom conversion is needed because scf does not provide atomic name.
+    """
+    keys_not_found = []
+    for x in scf_output:
+        data = re.findall(scf_output[x], text, re.MULTILINE)
+        if len(data) == 1:
+            simulation[x[2:]] = data.pop()
+        elif len(data) == 0:
+            keys_not_found.append[x[2:]]
+        else:
+            simulation[x[2:]] = data
+
+    # the normalizations MUST BE DONE in the same order as the data are
+    # collected becouse the first that fails will rise an error and all the
+    # others wont be applied.
+
+    # normalization of force and positions
+    simulation['atom'] = []
+    force = simulation.pop('force')[:nat]
+
+    # zip by doc cut the lenght of the result to the shorter.
+    for x, y in zip(positions, force):
+        if x[0] == y[0] and x[1] == atom_conversion[int(y[1])]:
+            simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
+        else:
+            raise CorruptedData('Error in conversion step, check qe output',
+                                simulation)
+
+    if len(force) < nat:
+        # this means that not enouth forces have been found on the output file
+        raise CorruptedData('not enought forces, damage data', simulation,
+                            'Forces')
+
+    # normalization of stress and pressure information
+    simulation['stress_tesnsor'] = []
+    simulation['pressure_tesnsor'] = []
+    if 'stress_units' in keys_not_found:
+        raise CorruptedData('stress units not found', simulation,
+                            'stress_Units')
+    if 'pressure' in keys_not_found:
+        raise CorruptedData('pressure not found', simulation,
+                            'Pressure_Units')
+    else:
+        simulation['pressure'] = [simulation['pressure'][1],
+                                  simulation['pressure'][0]]
+
+    for x in simulation.pop('stress_and_kbar_tensor'):
+        simulation['stress_tensor'].append(x[:3])
+        simulation['pressure_tensor'].append(x[3:])
+    if len(simulation['stress_tensor']) < 3:
+        raise CorruptedData('stress tensor and pressure tensor incomplete',
+                            simulation, 'stress_tensor', 'stress_tensor')
+    return simulation
+
+
 def scf_complete(text):
     """
     given the output of a complete scf step it returns a dictionary
