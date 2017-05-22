@@ -4,27 +4,34 @@ DEBUG = False
 
 
 class CorruptedData(Exception):
-    def __init__(self, message, data):
+    def __init__(self, message, data, *args):
         super(CorruptedData, self).__init__(message)
         # clean the data form empty keys
         data_celaned = {k: v for k, v in data.items() if v != []}
+        for x in args:
+            data_celaned['{}_damage'.format(x)] = True
         self.parsed_data = data_celaned
 
 
 # util to regexp
-unit = r'((?:Ry|a\.u\.|(?:b|B)ohr|\/|ang|kbar)+\)?(?:\^|\*\*)?\d*)'
+unit = r'((?:Ry|a\.?u\.?|(?:b|B)ohr|\/|(?:a|A)ng|kbar|g|cm|ev)+'\
+       r'(?:\^|\*\*)?\d*)'
 atoms_name = r'(?:C|H|O|N)'
 
-# information of scf
-scf_set = dict(
+# qe info
+qe_info = dict(
     r_PWSCF_version=r'^ *Program PWSCF (.+) starts',
+    )
+
+# information of scf actually head informations
+scf_input = dict(
     r_pseudopotential=r'^ *PseudoPot. # (\d+) for *(\w{1,2})'
                       r' *read from file:\n^ *(.+\.UPF)$',
     r_bli=r'^ *bravais-lattice index *= *(\d+)',
     r_alat=r'^ *lattice parameter \(alat\) *= *([\d\.\+\-]+) *{}'.format(unit),
     r_unit_cell_volume=r'^ *unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
                        unit),
-    r_cell_side_units=r' *crystal axes: \(cart. coord. in units of (alat)\)',
+    r_cell_side_units=r'^ *crystal axes: \(cart. coord. in units of (alat)\)',
     r_cell_side=r' *a\((\d+)\) *= *\( *(-?[\d.]+) *(-?[\d.]+) *'
                 '(-?[\d.]+) *\)',
     r_natoms=r'^ *number of atoms/cell *= *(\d+)',
@@ -36,22 +43,27 @@ scf_set = dict(
     r_charge_cutoff=r'^ *charge density cutoff *= *([\d\.\+\-]+) *{}'.format(
                     unit),
     r_threshold=r'^ *convergence threshold *= *(\d+.\d+E?-?\d*)',
-    r_mixing=r'^ *mixing beta *= *([\d\.\+\-]+)',
+    r_mixing=r'^ *mixing beta *= *([\d\.\+\-]+)')
+scf_input_cryst = dict(
+    r_cryst_split_begin=r'^ *Crystallographic axes',
     r_apos=r'^ +(\d+) +({})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
-           '([\d\+\-\.]+) +\)'.format(atoms_name))
+           '([\d\+\-\.]+) +\)'.format(atoms_name),
+    r_cryst_split_end=r'^ *Dense  grid')
 
 # data of scf
 # TODO, the pressure calculation is carried out in different way
 # on different QE version
 # here we have the most common version
 
-scf_data_out = dict(
+scf_output = dict(
     r_total_energy=r'^![\w =]+([\d\.\+\- ]+){}'.format(unit),
     r_E_hartree=r'^ +hartree \w+ += +([\d\.\+\-]+) +{}'.format(unit),
     r_E_onelectron=r'^ +one-electron \w+ += +([\d\.\+\-]+) +{}'.format(unit),
     r_E_xc=r'^ +xc \w+ += +([\d\.\+\-]+) +{}'.format(unit),
     r_E_ewald=r'^ +ewald \w+ += +([\d\.\+\-]+) +{}'.format(unit),
     r_E_paw=r'^ +one-center paw \w+\. += +([\d\.\+\-]+) +{}'.format(unit),
+    r_force_units=r'^ *Forces acting on atoms (cartesian axes, *{})'.
+                  format(unit),
     r_force=r'atom +([\d\.\+\-]+) +type +([\d\.\+\-]+)'
             ' +force = +([\d\.\+\-]+) +([\d\.\+\-]+) +([\d\.\+\-]+)',
     r_stress_units=r' +total +stress +{}'.format(unit),
