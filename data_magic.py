@@ -13,9 +13,9 @@ def file_parser(file):
     textfile = open(file, 'r')
     filetext = textfile.read()
 
-    if len(re.findall(r_close, filetext)) == 1:
+    if len(re.findall(qe_info['r_close'], filetext)) == 1:
         logging.info('job eneded correctly')
-    elif len(re.findall(r_close, filetext)) == 0:
+    elif len(re.findall(qe_info['r_close'], filetext)) == 0:
         logging.info('job ended uncorrectly')
     else:
         logging.info('wut?? THIS FILE IS NOT MENT TO BE PARSED')
@@ -86,7 +86,7 @@ def file_parser(file):
 
             key = hashlib.sha224(text.encode('utf-8')).hexdigest()
 
-            # key manager among the simulation
+            # key manager among the simulations
             if i == 0:
                 simulations[key] = dict(file=str(file),
                                         firts=key,
