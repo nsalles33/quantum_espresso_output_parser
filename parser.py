@@ -1,6 +1,5 @@
 import re
-
-DEBUG = False
+import logging
 
 
 class CorruptedData(Exception):
