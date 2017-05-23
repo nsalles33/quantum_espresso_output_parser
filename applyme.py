@@ -1,17 +1,19 @@
 import json
 import os
+import logging
 from data_magic import *
+
+logging.basicConfig(filename='./parse.log', level=logging.INFO)
+
 simulationsData = []
-mypath = './new_test'
+mypath = './passed_test'
 files = [os.path.join(mypath, f) for f in os.listdir(mypath) if
-         os.path.isfile(os.path.join(mypath, f)) if f.startswith('output')]
+         os.path.isfile(os.path.join(mypath, f)) if f.endswith('output')]
 
 summa = {}
-log = open('logger.log', 'a')
 for x in files:
-    s = '--------------' + x + '----------------\n'
-    log.write(s)
-    summa.update(file_parser(x, log))
+    logging.info('--------------' + x + '----------------')
+    summa.update(file_parser(x))
 
-with open('alpha.json', 'w') as f:
+with open('v0.2.1.json', 'w') as f:
     json.dump(summa, f)
