@@ -227,7 +227,7 @@ def scf_in(text, scf_out_feeder=False):
                                                     pseudo_name)
         else:
             raise ValueError('Inconsistency in QE output')
-    if len(simulation['atom_description']) < simulation['nspecies']:
+    if len(simulation['atom_description']) < int(simulation['nspecies']):
         raise CorruptedData('some atom are not well described', simulation,
                             'atom_description')
 
@@ -246,6 +246,10 @@ def scf_in(text, scf_out_feeder=False):
     a_pos = re.findall(scf_input_cryst['r_apos'],
                        crystal_text,
                        re.MULTILINE)
+
+    # add apos_units, only crystal is supported
+    simulation['apos_units'] = ['crystal']
+
     if len(a_pos) < nat:
         raise CorruptedData('some position are missing', simulation,
                             'atom_position')
@@ -269,21 +273,29 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
         if len(data) == 1:
             simulation[x[2:]] = data.pop()
         elif len(data) == 0:
-            keys_not_found.append[x[2:]]
+            keys_not_found.append(x[2:])
         else:
             simulation[x[2:]] = data
 
     # the normalizations MUST BE DONE in the same order as the data are
     # collected becouse the first that fails will rise an error and all the
     # others wont be applied.
-
+    if 'total_energy' in keys_not_found:
+        raise EnergyError('Energy not found',
+                          simulation)
     # normalization of force and positions
     simulation['atom'] = []
-    force = simulation.pop('force')[:nat]
+    if 'force' in keys_not_found:
+        # no forces at all are available
+        raise CorruptedData('not enought forces, damage data', simulation,
+                            'Forces')
 
+    force = simulation.pop('force')[:nat]
     # zip by doc cut the lenght of the result to the shorter.
     for x, y in zip(positions, force):
-        if x[0] == y[0] and x[1] == atom_conversion[int(y[1])]:
+        logging.debug(int(x[0]) == int(y[0]))
+        logging.debug(x[1] == atom_conversion[int(y[1])])
+        if int(x[0]) == int(y[0]) and x[1] == atom_conversion[int(y[1])]:
             simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
         else:
             raise CorruptedData('Error in conversion step, check qe output',
@@ -291,12 +303,15 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
 
     if len(force) < nat:
         # this means that not enouth forces have been found on the output file
-        raise CorruptedData('not enought forces, damage data', simulation,
+        for x in range(len(force), nat):
+            y = positions[x]
+            simulation['atom'].append((y[0], y[1], y[2:]))
+        raise CorruptedData('not enough forces, damage data', simulation,
                             'Forces')
 
     # normalization of stress and pressure information
-    simulation['stress_tesnsor'] = []
-    simulation['pressure_tesnsor'] = []
+    simulation['stress_tensor'] = []
+    simulation['pressure_tensor'] = []
     if 'stress_units' in keys_not_found:
         raise CorruptedData('stress units not found', simulation,
                             'stress_Units')
@@ -322,65 +337,11 @@ def scf_complete(text):
     with all the data. The output MUST HAVE AT LEAST the '! energy'
     line.
     """
-    simulation = {}
-    for x in scf_input:
-        data = re.findall(scf_input[x], text, re.MULTILINE)
-        if len(data) == 1:
-            simulation[x[2:]] = data.pop()
-        else:
-            simulation[x[2:]] = data
-    for x in scf_output:
-        data = re.findall(scf_output[x], text, re.MULTILINE)
-        if len(data) == 1:
-            simulation[x[2:]] = data.pop()
-        else:
-            simulation[x[2:]] = data
-
-    # the normalizations MUST BE DONE in the same order as the data are
-    # collected becouse the first that fails will rise an error and all the
-    # others wont be applied.
-
-    # normalization of atom description
-    simulation['atom_description'] = {}
-    for x, y in zip(simulation.pop('dspecies'),
-                    simulation.pop('pseudopotential')):
-        if x[0] == y[1]:
-            pseudo_name = y[2].split('/')[-1]
-            simulation['atom_description'][y[1]] = (y[0], x[1], x[2],
-                                                    pseudo_name)
-        else:
-            raise ValueError('Inconsistency in QE output')
-
-    conversion = {int(v[0]): k for k, v in
-                  simulation['atom_description'].items()}
-
-    # normalization of cell description
-    cell_side = simulation.pop('cell_side')
-    simulation['cell_side'] = [x[1:] for x in cell_side]
-
-    # normalization of force and positions
-    simulation['atom'] = []
-    nat = int(simulation['natoms'])
-    pos = simulation.pop('apos')[nat:]
-    force = simulation.pop('force')[:nat]
-
-    if len(force) < nat:
-        # try to save as much data as possible
-        for x in pos:
-            simulation['atom'].append((x[0], x[1], x[2:]))
-        raise CorruptedData('not enought forces, damage data', simulation)
-    for x, y in zip(pos, force):
-        if x[0] == y[0] and x[1] == conversion[int(y[1])]:
-            simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
-        else:
-            raise ValueError('Error in conversion step')
-
-    # normalization of stress and pressure information
-    simulation['stress_tesnsor'] = []
-    simulation['pressure_tesnsor'] = []
-    for x in simulation.pop('stress_and_kbar_tensor'):
-        simulation['stress_tesnsor'].append(x[:3])
-        simulation['pressure_tesnsor'].append(x[3:])
+    logging.info('complete scf calculation found')
+    logging.debug(text)
+    data = scf_in(text, True)
+    simulation = scf_out(*data)
+    logging.info(simulation)
     return simulation
 
 
@@ -390,18 +351,16 @@ def bfgs_complete(text):
     with all the data. The output MUST HAVE AT LEAST the '! energy'
     line.
     """
-
+    logging.info('complete bfgs calculation found')
+    logging.debug(text)
     simulation = {}
-    for x in scf_data_out:
-        data = re.findall(scf_data_out[x], text, re.MULTILINE)
+    keys_not_found = []
+    for x in bfgs_output:
+        data = re.findall(bfgs_output[x], text, re.MULTILINE)
         if len(data) == 1:
             simulation[x[2:]] = data.pop()
-        else:
-            simulation[x[2:]] = data
-    for x in bfgs_data_out:
-        data = re.findall(bfgs_data_out[x], text, re.MULTILINE)
-        if len(data) == 1:
-            simulation[x[2:]] = data.pop()
+        elif len(data) == 0:
+            keys_not_found.append(x[2:])
         else:
             simulation[x[2:]] = data
 
@@ -409,36 +368,34 @@ def bfgs_complete(text):
     try:
         cell_side_units = simulation['cell_side_units'][0].split('=')
     except IndexError:
-        raise CorruptedData('no cell_side_units', simulation)
+        raise CorruptedData('no cell_side_units', simulation,
+                            'cell_side_units')
+    except KeyError:
+        raise CorruptedData('no cell_side_units', simulation,
+                            'cell_side_units')
+
     if len(cell_side_units) == 2:
         if cell_side_units[0] == 'alat':
             simulation['cell_side_units'] = cell_side_units[0]
             simulation['alat'] = cell_side_units[1]
-
-    # normalization of force and positions
-    simulation['atom'] = []
-    pos = simulation.pop('apos')
-    conversion = []
-    for x in pos:
-        if x[0] not in conversion:
-            conversion.append(x[0])
-    conversion = {i + 1: j for i, j in enumerate(conversion)}
-    nat = len(pos)
-    force = simulation.pop('force')[:nat]
-    if len(force) < nat:
-        if len(force) < nat:
-            for x in pos:
-                simulation['atom'].append((x[0], x[1:]))
-        raise CorruptedData('not enought forces, damage data', simulation)
-    for x, y in zip(pos, force):
-        if x[0] == conversion[int(y[1])]:
-            simulation['atom'].append((y[0], x[0], x[1:], y[2:]))
         else:
-            if DEBUG:
-                print('D - bfgs_complete')
-                print(text)
-                print(conversion)
-                print(x[0])
-                print(y[1])
-            raise ValueError('Error in conversion step')
+            raise ValueError()
+
+    # normalization of positions
+    # FIXME I assume that the output is always in crystal coordinate
+    pos = []
+    tmp = simulation.pop('apos')
+    conversion = {}
+    nat = len(tmp)
+    c_set = []
+
+    for x in range(nat):
+        pos.append([x + 1, tmp[x][0], tmp[x][1], tmp[x][2], tmp[x][3]])
+        if tmp[x][0] not in c_set:
+            c_set.append(tmp[x][0])
+
+    for i, x in enumerate(c_set):
+        conversion[i + 1] = x
+    scf_out(text, nat, conversion, pos, simulation)
+    logging.info(simulation)
     return simulation
