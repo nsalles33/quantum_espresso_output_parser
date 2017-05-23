@@ -12,6 +12,16 @@ class CorruptedData(Exception):
         self.parsed_data = data_celaned
 
 
+class EnergyError(Exception):
+    def __init__(self, message, data, *args):
+        super(EnergyError, self).__init__(message)
+        # clean the data form empty keys
+        data_celaned = {k: v for k, v in data.items() if v != []}
+        for x in args:
+            data_celaned['{}_damage'.format(x)] = True
+        self.parsed_data = data_celaned
+
+
 # util to regexp
 unit = r'((?:Ry|a\.?u\.?|(?:b|B)ohr|\/|(?:a|A)ng|kbar|g|cm|ev)+'\
        r'(?:\^|\*\*)?\d*)'
