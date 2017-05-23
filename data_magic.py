@@ -3,7 +3,8 @@ import hashlib
 import logging
 from parser import *
 
-# logging.basicConfig(filename='./example.log', level=logging.DEBUG)
+# logging.basicConfig(filename='./data_magic.log', level=logging.DEBUG)
+
 
 def file_parser(file):
     """
