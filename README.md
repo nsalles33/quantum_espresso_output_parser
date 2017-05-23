@@ -48,9 +48,9 @@ id_simulation:
         + cell_side_units
         |   |
         |   # for now units 
-        |   # like bohr 
-        |   # or: 
-        |   # alat - in this case look for
+        |   # like: 
+        |   # - bohr 
+        |   # - alat in this case look for
         |   # alat key
         + cell_side
         |   |
@@ -128,12 +128,32 @@ id_simulation:
         |   |
         |   + value
         |   + units
-
 ```
+# Errors flag:
+
+the flag **damage** is always True if something went wrong
+
+## serious:
+
+    * atom_description_damage
+    * atom_position_damage: code where not able to find atomic positions.
+    * cell_side_units_damage
+
+## not serious:
+
+    * forces_damage: some could still be available
+    * stress_units_damage
+    * pressure_units_damage
+    * stress_tensor_damage
+    * stress_tensor_damage
+
+
 # Read the log:
 YOU MUST DO IT!
 
-For every corrupted file there is the discarded part of data with on top a bunch of useless information. Check if the discarded part of data is ok with what you expected. 
+It gives you the idea of what have been parsed and what not.
+Debug level write also each chunk of text and the data recovered form it.
+Check if the result is OK with what you expected. 
 
 If I will have time I will work on improving the data recovery.
 
