@@ -85,7 +85,7 @@ scf_output = dict(
 # information of BFGS
 # obs:
 # * criteria are present only if the bfgs converged
-# * nstep = maximimu nuber of step in BFGS
+# * nstep = maximimu number of step in BFGS
 bfgs_set = dict(
     r_nstep=r'^ *nstep *= *(\d+)',
     r_start=r'^ +BFGS Geometry Optimization',
@@ -367,10 +367,15 @@ def bfgs_complete(text):
             simulation[x[2:]] = data
 
     # normalization of cell side units
-    logging.debug(simulation['cell_side_units'])
     try:
         cell_side_units = simulation['cell_side_units'].split('=')
+        logging.debug(simulation['cell_side_units'])
     except KeyError:
+        logging.info('cell_side_units not found')
+        logging.info('KNOWN BUG, sometimes find_bfgs doesn t do')
+        logging.info('his job properly please check that this is the case')
+        logging.info('parsed text:')
+        logging.info(text)
         raise CorruptedData('no cell_side_units', simulation,
                             'cell_side_units')
 
