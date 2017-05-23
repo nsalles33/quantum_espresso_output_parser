@@ -6,9 +6,9 @@ from data_magic import *
 logging.basicConfig(filename='./parse.log', level=logging.INFO)
 
 simulationsData = []
-mypath = './passed_test'
+mypath = './new_test'
 files = [os.path.join(mypath, f) for f in os.listdir(mypath) if
-         os.path.isfile(os.path.join(mypath, f)) if f.endswith('output')]
+         os.path.isfile(os.path.join(mypath, f)) if f.startswith('output')]
 
 summa = {}
 for x in files:
