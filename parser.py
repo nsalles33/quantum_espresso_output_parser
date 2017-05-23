@@ -30,7 +30,7 @@ atoms_name = r'(?:C|H|O|N)'
 # qe info
 qe_info = dict(
     r_PWSCF_version=r'^ *Program PWSCF (.+) starts',
-    )
+    r_close=r'JOB DONE')
 
 # information of scf actually head informations
 scf_input = dict(
@@ -38,8 +38,8 @@ scf_input = dict(
                       r' *read from file:\n^ *(.+\.UPF)$',
     r_bli=r'^ *bravais-lattice index *= *(\d+)',
     r_alat=r'^ *lattice parameter \(alat\) *= *([\d\.\+\-]+) *{}'.format(unit),
-    r_unit_cell_volume=r'^ *unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
-                       unit),
+    r_unit_cell_volume=r'^ *unit-cell volume *= *([\d\.\+\-]+) *'
+                       r'(\(a\.u\.\)\^3)',
     r_cell_side_units=r'^ *crystal axes: \(cart. coord. in units of (alat)\)',
     r_cell_side=r' *a\((\d+)\) *= *\( *(-?[\d.]+) *(-?[\d.]+) *'
                 '(-?[\d.]+) *\)',
@@ -53,6 +53,7 @@ scf_input = dict(
                     unit),
     r_threshold=r'^ *convergence threshold *= *(\d+.\d+E?-?\d*)',
     r_mixing=r'^ *mixing beta *= *([\d\.\+\-]+)')
+
 scf_input_cryst = dict(
     r_cryst_split_begin=r'^ *Crystallographic axes',
     r_apos=r'^ +(\d+) +({})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
@@ -75,10 +76,10 @@ scf_output = dict(
                   format(unit),
     r_force=r'atom +([\d\.\+\-]+) +type +([\d\.\+\-]+)'
             ' +force = +([\d\.\+\-]+) +([\d\.\+\-]+) +([\d\.\+\-]+)',
-    r_stress_units=r' +total +stress +{}'.format(unit),
-    r_pressure=r'\(kbar\) +P= +([\d\.\+\-]+)',
+    r_stress_units=r' +total +stress +\({}\)'.format(unit),
+    r_pressure=r'\((kbar)\) +P= +([\d\.\+\-]+)',
     r_stress_and_kbar_tensor=r'^ {2,3}([\d\.\+\-]+) +([\d\.\+\-]+) +'
-                             r'([\d\.\+\-]+) {9,10}([\d\.\+\-]+) +'
+                             r'([\d\.\+\-]+) {8,10}([\d\.\+\-]+) +'
                              r'([\d\.\+\-]+) +([\d\.\+\-]+)$')
 
 # information of BFGS
@@ -99,7 +100,8 @@ bfgs_set = dict(
     r_bfgs_split=r'number of scf cycles')
 
 # data of bfgs:
-bfgs_data_out = dict(
+# this is the output that is fed to next step
+bfgs_output = dict(
     r_scf_cycles=r'^ *number of scf cycles *= *(\d+)',
     r_bfgs_steps=r'^ *number of bfgs steps *= *(\d+)',
     r_unit_cell_volume=r'^ *new unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
@@ -109,9 +111,6 @@ bfgs_data_out = dict(
     r_apos_units=r'ATOMIC_POSITIONS \((.+)\)',
     r_apos=r'^({}) +([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$'
                 .format(atoms_name))
-
-# closing string:
-r_close = r'JOB DONE'
 
 
 def find_bfgs(text, verbose=False):
