@@ -266,6 +266,7 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
     raise several error if something went wrong,
     nat: number of atom
     atom conversion is needed because scf does not provide atomic name.
+    simulation IS CHANGED INSIDE THIS ROUTINE
     """
     keys_not_found = []
     for x in scf_output:
@@ -288,18 +289,18 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
     if 'force' in keys_not_found:
         # no forces at all are available
         raise CorruptedData('not enought forces, damage data', simulation,
-                            'Forces')
+                            'forces')
 
     force = simulation.pop('force')[:nat]
     # zip by doc cut the lenght of the result to the shorter.
     for x, y in zip(positions, force):
-        logging.debug(int(x[0]) == int(y[0]))
-        logging.debug(x[1] == atom_conversion[int(y[1])])
         if int(x[0]) == int(y[0]) and x[1] == atom_conversion[int(y[1])]:
             simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
         else:
-            raise CorruptedData('Error in conversion step, check qe output',
-                                simulation)
+            logging.debug(int(x[0]) == int(y[0]))
+            logging.debug(x[1] == atom_conversion[int(y[1])])
+            raise ValueError('Error in conversion step, check qe output',
+                             simulation)
 
     if len(force) < nat:
         # this means that not enouth forces have been found on the output file
@@ -307,17 +308,17 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
             y = positions[x]
             simulation['atom'].append((y[0], y[1], y[2:]))
         raise CorruptedData('not enough forces, damage data', simulation,
-                            'Forces')
+                            'forces')
 
     # normalization of stress and pressure information
     simulation['stress_tensor'] = []
     simulation['pressure_tensor'] = []
     if 'stress_units' in keys_not_found:
         raise CorruptedData('stress units not found', simulation,
-                            'stress_Units')
+                            'stress_units')
     if 'pressure' in keys_not_found:
         raise CorruptedData('pressure not found', simulation,
-                            'Pressure_Units')
+                            'pressure_units')
     else:
         simulation['pressure'] = [simulation['pressure'][1],
                                   simulation['pressure'][0]]
@@ -341,6 +342,7 @@ def scf_complete(text):
     logging.debug(text)
     data = scf_in(text, True)
     simulation = scf_out(*data)
+    simulation['kind'] = 'scf'
     logging.info(simulation)
     return simulation
 
@@ -365,11 +367,9 @@ def bfgs_complete(text):
             simulation[x[2:]] = data
 
     # normalization of cell side units
+    logging.debug(simulation['cell_side_units'])
     try:
-        cell_side_units = simulation['cell_side_units'][0].split('=')
-    except IndexError:
-        raise CorruptedData('no cell_side_units', simulation,
-                            'cell_side_units')
+        cell_side_units = simulation['cell_side_units'].split('=')
     except KeyError:
         raise CorruptedData('no cell_side_units', simulation,
                             'cell_side_units')
@@ -379,7 +379,7 @@ def bfgs_complete(text):
             simulation['cell_side_units'] = cell_side_units[0]
             simulation['alat'] = cell_side_units[1]
         else:
-            raise ValueError()
+            raise ValueError('Only -alat- is supported')
 
     # normalization of positions
     # FIXME I assume that the output is always in crystal coordinate
@@ -397,5 +397,6 @@ def bfgs_complete(text):
     for i, x in enumerate(c_set):
         conversion[i + 1] = x
     scf_out(text, nat, conversion, pos, simulation)
+    simulation['kind'] = 'bfgs'
     logging.info(simulation)
     return simulation
