@@ -5,3 +5,7 @@
 *.json
 *.sublime*
 test.py
+/new_tests
+.idea
+.ipynb_checkpoints
+*.ipynb
