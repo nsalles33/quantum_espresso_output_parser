@@ -1,37 +1,24 @@
 import re
 import hashlib
+import logging
 from parser import *
 
+# logging.basicConfig(filename='./example.log', level=logging.DEBUG)
 
-def line():
-    print('----------------------')
-
-
-def debug(simulations, id_s):
-    for y in simulations[id_s]:
-        print(y)
-        print(simulations[id_s][y])
-        line()
-
-
-def file_parser(file, log=None):
+def file_parser(file):
     """
     file: name of the file as string
-    log: TextIOWrapper
     output: dict with data (see README)
     """
-    if log is None:
-        # if I put it as log default parameter the file is
-        # always created
-        log = open('{}_parser.log'.format(file), 'a')
     textfile = open(file, 'r')
     filetext = textfile.read()
+
     if len(re.findall(r_close, filetext)) == 1:
-        log.write('job eneded correctly\n')
+        logging.info('job eneded correctly')
     elif len(re.findall(r_close, filetext)) == 0:
-        log.write('job ended uncorrectly\n')
+        logging.info('job ended uncorrectly')
     else:
-        log.write('wut?? THIS FILE IS NOT MENT TO BE PARSED\n')
+        logging.info('wut?? THIS FILE IS NOT MENT TO BE PARSED')
         # TODO raise an error wold be better
         return {}
 
@@ -39,13 +26,13 @@ def file_parser(file, log=None):
     # 1 energy => 1 simulation.
     # 0 energy => no simulation.
     # 1+ energies => error.
-    matches = [x for x in re.findall(scf_data_out['r_total_energy'], filetext,
+    matches = [x for x in re.findall(scf_output['r_total_energy'], filetext,
                                      re.MULTILINE)]
     if len(matches) != 0:
         n_simulations = len(matches)
-        log.write('{} simulations found\n'.format(n_simulations))
+        logging.info('{} simulations found'.format(n_simulations))
     else:
-        log.write('no energy found very bad!!!!\n')
+        logging.info('no energy found very bad!!!!')
         # TODO raise an error wold be better
         return {}
 
@@ -126,7 +113,7 @@ def file_parser(file, log=None):
                 simulations[previous_key]['next'] = key
 
     else:
-        log.write('no bfgs calculation founded\n')
+        logging.info('no bfgs calculation founded')
         kind, text = split_text[0]
         key = hashlib.sha224(text.encode('utf-8')).hexdigest()
         simulations[key] = dict(file=str(file),
@@ -136,11 +123,14 @@ def file_parser(file, log=None):
         try:
             simulations[key].update(scf_complete(text))
         except CorruptedData as e:
-            log.write(str(e) + '\n')
+            logging.info(str(e) + '\n')
             if 'total_energy' in e.parsed_data:
-                log.write('energy recovered')
+                logging.info('energy recovered')
                 simulations[key].update(e.parsed_data)
                 simulations[key]['damage'] = True
     textfile.close()
-    # debug(simulations, id_simulations[0])
     return simulations
+
+
+if __name__ == '__main__':
+    s = file_parser('./new_test/output.09-05-2017.19.36.14')
