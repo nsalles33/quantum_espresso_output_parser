@@ -1,9 +1,9 @@
 # quantum espresso output parser
 Up to now this is a parser wanna be, so use it at your own risk.
-this code is working on PWSCF > 6.0.
-version 0.1 was working on version 5.4 some regexp have chenge so I don't support the old version anymore.
+This code is working on PWSCF > 6.0.
+Version 0.1 worked on version 5.4 some regexp changed so I don't support the old version anymore.
 
-It is developed arround SCF + BFGS calculations so if other calculations are supported it is just by chance. The code has been tested over more than 500 output.
+It is developed around SCF + BFGS calculations so if other calculations are supported it is just by chance. The code has been tested over more than 500 output.
 
 If options capable of forcing the calculation to continue even if there has been no convergence are active in the input file the code wont fail but the data of the steps that didn't converged could be unreliable. 
 
