@@ -1,5 +1,7 @@
 # quantum espresso output parser
 Up to now this is a parser wanna be, so use it at your own risk.
+this code is working on PWSCF > 6.0.
+version 0.1 was working on version 5.4 some regexp have chenge so I don't support the old version anymore.
 
 It is developed arround SCF + BFGS calculations so if other calculations are supported it is just by chance. The code has been tested over more than 500 output.
 
@@ -34,22 +36,24 @@ id_simulation:
         + bli (bravais lattice index)
         + alat
         |   |
-        |   # available only in SCF,
-        |   # bfgs depends on input setting
         |   + value
+        |   + units
+        |   --or--
+        |   |
         |   + units
         + unit_cell_volume
         |   |
-        |   + value
-        |   + units
+        |   + value \ only if in a.u
+        |   + units / otherwise not avail
         + cell_side_units
         |   |
-        |   # if not available the error is due
-        |   # to unexpected value on
-        |   # QE output.
+        |   # for now units 
+        |   # like bohr 
+        |   # or: 
+        |   # alat - in this case look for
+        |   # alat key
         + cell_side
         |   |
-        |   # units of alat, not specified
         |   + a1
         |   + a1
         |   + a3
@@ -61,20 +65,21 @@ id_simulation:
         + charge_cutoff
         + threshold
         + mixing
+        + force_units
+        + apos_units
+        |   |
+        |   # in bfgs several value are possible
+        |   # in scf crystal only is supported
         + atoms
         |     |
         |     + number of the atom
-        |     + type
-        |     + position (crystal coordinate)
-        |     |        |
-        |     |        + v1
-        |     |        + v2
-        |     |        + v3
-        |     + force (Ry/au)
-        |           |
-        |           + v1
-        |           + v2
-        |           + v3
+        |     + type (letter)
+        |     + v1 \
+        |     + v2  > position (see_apos_units)
+        |     + v3 /
+        |     + f1 \
+        |     + f2  > force (see force_units)
+        |     + f3 /
         + cell (crystal coordinate, alat)
         |    |
         |    + v1
@@ -82,11 +87,29 @@ id_simulation:
         |    + v3
         + alat of cell
         + total_energy
+        |   |
+        |   + value
+        |   + units
         + E_hartree
+        |   |
+        |   + value
+        |   + units
         + E_onelectron
+        |   |
+        |   + value
+        |   + units
         + E_xc
+        |   |
+        |   + value
+        |   + units
         + E_ewald
+        |   |
+        |   + value
+        |   + units
         + E_paw
+        |   |
+        |   + value
+        |   + units
         + stress_units
         + atom_description
         |   |
@@ -98,18 +121,14 @@ id_simulation:
         |   |   + pseudopotential file
         + stress_tesnsor 
         + pressure_tesnsor
-        
-        if last:
-        |
-        + bfgs_converged = bool
-        + recalculation = bool
- 
-        if damage :
-        |
-        + damage = True => energy ok, other data could be corrupted
-        |
-        + damage_next = True => 
-            there is one more corrupted simulation in the file that has been discarded 
+        + kind
+        |   |
+        |   + scf
+        |   + bfgs
+        |   |
+        |   + value
+        |   + units
+
 ```
 # Read the log:
 YOU MUST DO IT!
