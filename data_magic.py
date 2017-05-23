@@ -51,26 +51,26 @@ def file_parser(file):
                 try:
                     simulation.update(scf_complete(text))
                 except CorruptedData as e:
-                    log.write(str(e) + '\n')
-                    if 'total_energy' in e.parsed_data:
-                        log.write('energy recovered')
-                        simulation.update(e.parsed_data)
-                        simulation['damage'] = True
-                        damage_simulation = True
-                    else:
-                        valid_simulation = False
+                    logging.info(str(e))
+                    logging.info('energy recovered')
+                    simulation.update(e.parsed_data)
+                    simulation['damage'] = True
+                    damage_simulation = True
+                except EnergyError as e:
+                    logging.info(e)
+                    valid_simulation = False
             elif kind == 'bfgs':
                 try:
                     simulation.update(bfgs_complete(text))
                 except CorruptedData as e:
-                    log.write(str(e) + '\n')
-                    if 'total_energy' in e.parsed_data:
-                        log.write('energy recovered')
-                        simulation.update(e.parsed_data)
-                        simulation['damage'] = True
-                        damage_simulation = True
-                    else:
-                        valid_simulation = False
+                    logging.info(str(e))
+                    logging.info('energy recovered')
+                    simulation.update(e.parsed_data)
+                    simulation['damage'] = True
+                    damage_simulation = True
+                except EnergyError as e:
+                    logging.info(e)
+                    valid_simulation = False
             else:
                 raise ValueError('kind not implemented')
 
