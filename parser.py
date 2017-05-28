@@ -107,7 +107,7 @@ bfgs_output = dict(
     r_unit_cell_volume=r'^ *new unit-cell volume *= *([\d\.\+\-]+) *{}'.format(
                        unit),
     r_cell_side_units=r'CELL_PARAMETERS \(([\w ]+= +[\d\.\+\-]+|bohr)\)',
-    r_cell_side=r'^ {2,3}([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$',
+    r_cell_side=r'^ {1,3}([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$',
     r_apos_units=r'ATOMIC_POSITIONS \((.+)\)',
     r_apos=r'^({}) +([\d\+\-\.]+) +([\d\+\-\.]+) +([\d\+\-\.]+)$'
                 .format(atoms_name))
