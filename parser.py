@@ -172,6 +172,8 @@ def find_bfgs(text, verbose=False):
     # remove first line if not too long( usually it is just a set of blank
     # spaces)
     if len(bfgs_text[0]) < 30:
+        logging.info('removed head')
+        logging.debug(bfgs_text[0])
         bfgs_text.pop(0)
     bfgs_text = ['number of scf cycles' + x for x in bfgs_text]
 
