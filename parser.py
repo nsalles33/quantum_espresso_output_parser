@@ -1,6 +1,18 @@
 import re
 import logging
 
+logger = logging.getLogger(__name__)
+dump = logging.getLogger(__name__ + 'dump')
+
+fh = logging.FileHandler('simulations_discrard.log')
+formatter = logging.Formatter("%(asctime)s - %(name)s -\
+%(levelname)s - %(message)s")
+fh.setFormatter(formatter)
+dump.addHandler(fh)
+dump.setLevel(logging.DEBUG)
+
+
+
 
 class CorruptedData(Exception):
     def __init__(self, message, data, *args):
@@ -185,6 +197,8 @@ def find_bfgs(text, verbose=False):
         verbose_dict['bfgs_error'] = False
         verbose_dict['bfgs_converged'] = True if \
             len(bfgs_data['bfgs_converged']) >= 1 else False
+        logger.debug(verbose_dict)
+        logger.debug(bfgs_data)
         if verbose_dict['bfgs_converged']:
             bfgs_data['criteria'] = bfgs_data['criteria'][0]
             verbose_dict[bfgs_data['criteria'][0]] = bfgs_data['criteria'][1]
@@ -299,8 +313,8 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
         if int(x[0]) == int(y[0]) and x[1] == atom_conversion[int(y[1])]:
             simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
         else:
-            logging.debug(int(x[0]) == int(y[0]))
-            logging.debug(x[1] == atom_conversion[int(y[1])])
+            logger.debug(int(x[0]) == int(y[0]))
+            logger.debug(x[1] == atom_conversion[int(y[1])])
             raise ValueError('Error in conversion step, check qe output',
                              simulation)
 
@@ -340,12 +354,12 @@ def scf_complete(text):
     with all the data. The output MUST HAVE AT LEAST the '! energy'
     line.
     """
-    logging.info('complete scf calculation found')
-    logging.debug(text)
+    logger.info('complete scf calculation found')
+    logger.debug(text)
     data = scf_in(text, True)
     simulation = scf_out(*data)
     simulation['kind'] = 'scf'
-    logging.info(simulation)
+    logger.info(simulation)
     return simulation
 
 
@@ -355,8 +369,8 @@ def bfgs_complete(text):
     with all the data. The output MUST HAVE AT LEAST the '! energy'
     line.
     """
-    logging.info('complete bfgs calculation found')
-    logging.debug(text)
+    logger.info('complete bfgs calculation found')
+    logger.debug(text)
     simulation = {}
     keys_not_found = []
     for x in bfgs_output:
@@ -371,13 +385,13 @@ def bfgs_complete(text):
     # normalization of cell side units
     try:
         cell_side_units = simulation['cell_side_units'].split('=')
-        logging.debug(simulation['cell_side_units'])
+        logger.debug(simulation['cell_side_units'])
     except KeyError:
-        logging.info('cell_side_units not found')
-        logging.info('KNOWN BUG, sometimes find_bfgs doesn t do')
-        logging.info('his job properly please check that this is the case')
-        logging.info('parsed text:')
-        logging.info(text)
+        logger.info('cell_side_units not found')
+        logger.info('KNOWN BUG, sometimes find_bfgs doesn t do')
+        logger.info('his job properly please check that this is the case')
+        logger.info('parsed text:')
+        logger.info(text)
         raise CorruptedData('no cell_side_units', simulation,
                             'cell_side_units')
 
@@ -405,5 +419,5 @@ def bfgs_complete(text):
         conversion[i + 1] = x
     scf_out(text, nat, conversion, pos, simulation)
     simulation['kind'] = 'bfgs'
-    logging.info(simulation)
+    logger.info(simulation)
     return simulation
