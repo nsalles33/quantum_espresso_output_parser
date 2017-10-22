@@ -97,10 +97,10 @@ scf_output = dict(
 # information of BFGS
 # obs:
 # * criteria are present only if the bfgs converged
-# * nstep = maximimu number of step in BFGS
+# * nstep = maximum number of step in BFGS
 bfgs_set = dict(
     r_nstep=r'^ *nstep *= *(\d+)',
-    r_start=r'^ +BFGS Geometry Optimization',
+    r_start=r'^ +BFGS Geometry Optimization$',
     r_bfgs_converged=r' +bfgs converged in +(\d+) +scf cycles and +(\d+) +'
                      'bfgs steps',
     r_bfgs_not_converged=r'^ +The maximum number of steps has been reached.',
