@@ -125,13 +125,19 @@ bfgs_output = dict(
                 .format(atoms_name))
 
 
-def find_bfgs(text, verbose=False):
+def find_calculations(text, verbose=False):
     """
-    given a full file check if it is a bfgs caluclation and if it is true
-    it splits the text in a vector of single calculation
+    given a full file check if it is a bfgs calculation or not
+    if it is true it splits the text in a vector of single calculation
+    
     output:
-    if_bfgs, [('scf','text'),[ ('bfgs','text'),..]
-    if verbose is True the ouput will contain extra info in a dict:
+
+    if_bfgs, [('scf','text'), ('bfgs','text'),..]
+
+    if verbose is True the output will be:
+        if_bfgs, [('scf','text'), ('bfgs','text'),..], verbose_dict
+
+    verbose_dict:
         bfgs_error = bool
         bfgs_converged = bool
         --- if bfgs_converged = True
@@ -178,16 +184,24 @@ def find_bfgs(text, verbose=False):
         # last_coordinate = tmp[1]
         # data for next step
         tmp = tmp[0]
-    # division of all the oter steps
+    # division of all the other steps
+    # this is done in the "number of scf cycles line"
+    # I am open to pull requests
     bfgs_text = re.split(bfgs_set['r_bfgs_split'], tmp,
                          flags=re.MULTILINE)
+
     # remove first line if not too long( usually it is just a set of blank
     # spaces)
-    if len(bfgs_text[0]) < 30:
-        logging.info('removed head')
-        logging.debug(bfgs_text[0])
+    # the first line is composed by
+    #     BFGS Geometry Optimization*
+    #
+    #     number of scf cycles*    =   1
+    if len(bfgs_text[0]) < 15:
+        logger.info('removed head')
+        dump.debug('removed --%r--', bfgs_text[0])
         bfgs_text.pop(0)
-    bfgs_text = ['number of scf cycles' + x for x in bfgs_text]
+    # add the part removed by reg-exp
+    bfgs_text = ['     number of scf cycles' + x for x in bfgs_text]
 
     # put all the split data in the right vector
     for x in bfgs_text:
