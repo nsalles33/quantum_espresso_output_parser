@@ -11,9 +11,8 @@ formatter = logging.Formatter("%(asctime)s - %(name)s -\
 %(levelname)s - %(message)s")
 fh.setFormatter(formatter)
 dump.addHandler(fh)
-dump.setLevel(logging.DEBUG)
-
-
+dump.propagate = False
+dump.setLevel(logging.INFO)
 
 
 class CorruptedData(Exception):
@@ -95,6 +94,10 @@ def find_calculations(text, verbose=False):
         # last_coordinate = tmp[1]
         # data for next step
         tmp = tmp[0]
+    # discard the convergence part if present
+    if len(bfgs_data['bfgs_converged']) >= 1:
+        tmp = re.split(bfgs_set['r_bfgs_converged'], tmp, re.MULTILINE)
+        tmp = tmp[0]
     # division of all the other steps
     # this is done in the "number of scf cycles line"
     # I am open to pull requests
@@ -147,6 +150,7 @@ def scf_in(text, scf_out_feeder=False):
     raise several error if something went wrong,
     """
     simulation = {}
+    simulation['kind'] = 'scf'
     for x in scf_input:
         data = re.findall(scf_input[x], text, re.MULTILINE)
         if len(data) == 1:
@@ -169,6 +173,8 @@ def scf_in(text, scf_out_feeder=False):
         else:
             raise ValueError('Inconsistency in QE output')
     if len(simulation['atom_description']) < int(simulation['nspecies']):
+        dump.info('some atom are not well described')
+        dump.debug(text)
         raise CorruptedData('some atom are not well described', simulation,
                             'atom_description')
 
@@ -179,7 +185,7 @@ def scf_in(text, scf_out_feeder=False):
     nat = int(simulation['natoms'])
 
     # normalization of atomic positions, this part should be done better
-    # idea: force a division on work cristallographic axes
+    # idea: force a division on work crystallographic axes
     crystal_text = re.split(scf_input_cryst['r_cryst_split_begin'],
                             text, flags=re.MULTILINE)[1]
     crystal_text = re.split(scf_input_cryst['r_cryst_split_end'],
@@ -192,6 +198,8 @@ def scf_in(text, scf_out_feeder=False):
     simulation['apos_units'] = ['crystal']
 
     if len(a_pos) < nat:
+        dump.info('some position are missing')
+        dump.debug(text)
         raise CorruptedData('some position are missing', simulation,
                             'atom_position')
 
@@ -227,37 +235,49 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
                           simulation)
     # normalization of force and positions
     simulation['atom'] = []
-    if 'force' in keys_not_found:
+    if 'force' not in keys_not_found:
         # no forces at all are available
-        raise CorruptedData('not enought forces, damage data', simulation,
-                            'forces')
+        force = simulation.pop('force')[:nat]
+        # zip by doc cut the lenght of the result to the shorter.
+        for x, y in zip(positions, force):
+            if int(x[0]) == int(y[0]) and x[1] == atom_conversion[int(y[1])]:
+                simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
+            else:
+                logger.debug(int(x[0]) == int(y[0]))
+                logger.debug(x[1] == atom_conversion[int(y[1])])
+                raise ValueError('Error in conversion step, check qe output',
+                                 simulation)
 
-    force = simulation.pop('force')[:nat]
-    # zip by doc cut the lenght of the result to the shorter.
-    for x, y in zip(positions, force):
-        if int(x[0]) == int(y[0]) and x[1] == atom_conversion[int(y[1])]:
-            simulation['atom'].append((x[0], x[1], x[2:], y[2:]))
-        else:
-            logger.debug(int(x[0]) == int(y[0]))
-            logger.debug(x[1] == atom_conversion[int(y[1])])
-            raise ValueError('Error in conversion step, check qe output',
-                             simulation)
-
-    if len(force) < nat:
-        # this means that not enouth forces have been found on the output file
-        for x in range(len(force), nat):
+        if len(force) < nat:
+            # this means that not enough forces have been found on
+            # the output file
+            for x in range(len(force), nat):
+                y = positions[x]
+                simulation['atom'].append((y[0], y[1], y[2:]))
+            dump.info('not enough forces, damage data')
+            dump.debug(text)
+            raise CorruptedData('not enough forces, damage data', simulation,
+                                'forces')
+    else:
+        for x in range(nat):
             y = positions[x]
             simulation['atom'].append((y[0], y[1], y[2:]))
-        raise CorruptedData('not enough forces, damage data', simulation,
+        dump.info('no forces, damage data')
+        dump.debug(text)
+        raise CorruptedData('no forces, damage data', simulation,
                             'forces')
 
     # normalization of stress and pressure information
     simulation['stress_tensor'] = []
     simulation['pressure_tensor'] = []
     if 'stress_units' in keys_not_found:
+        dump.info('stress units not found')
+        dump.debug(text)
         raise CorruptedData('stress units not found', simulation,
                             'stress_units')
     if 'pressure' in keys_not_found:
+        dump.info('pressure not found')
+        dump.debug(text)
         raise CorruptedData('pressure not found', simulation,
                             'pressure_units')
     else:
@@ -268,6 +288,8 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
         simulation['stress_tensor'].append(x[:3])
         simulation['pressure_tensor'].append(x[3:])
     if len(simulation['stress_tensor']) < 3:
+        dump.info('stress tensor and pressure tensor incomplete')
+        dump.debug(text)
         raise CorruptedData('stress tensor and pressure tensor incomplete',
                             simulation, 'stress_tensor', 'stress_tensor')
     return simulation
@@ -279,12 +301,9 @@ def scf_complete(text):
     with all the data. The output MUST HAVE AT LEAST the '! energy'
     line.
     """
-    logger.info('complete scf calculation found')
-    logger.debug(text)
+    logger.info('scf calculation found')
     data = scf_in(text, True)
     simulation = scf_out(*data)
-    simulation['kind'] = 'scf'
-    logger.info(simulation)
     return simulation
 
 
@@ -294,9 +313,9 @@ def bfgs_complete(text):
     with all the data. The output MUST HAVE AT LEAST the '! energy'
     line.
     """
-    logger.info('complete bfgs calculation found')
-    logger.debug(text)
+    logger.info('bfgs calculation found')
     simulation = {}
+    simulation['kind'] = 'bfgs'
     keys_not_found = []
     for x in bfgs_output:
         data = re.findall(bfgs_output[x], text, re.MULTILINE)
@@ -310,16 +329,16 @@ def bfgs_complete(text):
     # normalization of cell side units
     try:
         cell_side_units = simulation['cell_side_units'].split('=')
-        logger.debug(simulation['cell_side_units'])
     except KeyError:
         logger.info('cell_side_units not found')
         logger.info('KNOWN BUG, sometimes find_bfgs doesn t do')
-        logger.info('his job properly please check that this is the case')
-        logger.info('parsed text:')
-        logger.info(text)
+        logger.info('his job properly please check simulations_discrard.log')
+        dump.info('cell_side_units not found')
+        dump.debug(text)
         raise CorruptedData('no cell_side_units', simulation,
                             'cell_side_units')
-
+    
+    # cell side units can be only alat or bohr
     if len(cell_side_units) == 2:
         if cell_side_units[0] == 'alat':
             simulation['cell_side_units'] = cell_side_units[0]
@@ -343,6 +362,4 @@ def bfgs_complete(text):
     for i, x in enumerate(c_set):
         conversion[i + 1] = x
     scf_out(text, nat, conversion, pos, simulation)
-    simulation['kind'] = 'bfgs'
-    logger.info(simulation)
     return simulation
