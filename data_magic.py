@@ -1,46 +1,47 @@
 import re
 import hashlib
 import logging
-from parser import *
 
-# logging.basicConfig(filename='./data_magic.log', level=logging.DEBUG)
+from regexp import *
+import parser
+logger = logging.getLogger(__name__)
+
 
 
 def file_parser(file):
     """
     file: name of the file as string
-    output: dict with data (see README)
+    output: dictionary with data (see README)
     """
     textfile = open(file, 'r')
     filetext = textfile.read()
 
     if len(re.findall(qe_info['r_close'], filetext)) == 1:
-        logging.info('job eneded correctly')
+        logger.info('job eneded correctly')
     elif len(re.findall(qe_info['r_close'], filetext)) == 0:
-        logging.info('job ended uncorrectly')
+        logger.info('job ended uncorrectly')
     else:
-        logging.info('wut?? THIS FILE IS NOT MENT TO BE PARSED')
+        logger.info('wut?? THIS FILE IS NOT MENT TO BE PARSED')
         # TODO raise an error wold be better
         return {}
 
     # how many energies are in the file?
-    # 1 energy => 1 simulation.
+    # 1+ energy => OK.
     # 0 energy => no simulation.
-    # 1+ energies => error.
     matches = [x for x in re.findall(scf_output['r_total_energy'], filetext,
                                      re.MULTILINE)]
     if len(matches) != 0:
         n_simulations = len(matches)
-        logging.info('{} simulations found'.format(n_simulations))
+        logger.info('{} simulations found'.format(n_simulations))
     else:
-        logging.info('no energy found very bad!!!!')
+        logger.info('no energy found, very bad!!!!')
         # TODO raise an error wold be better
         return {}
 
     # simulation initialization:
     simulations = {}
 
-    if_bfgs, split_text = find_bfgs(filetext)
+    if_bfgs, split_text = parser.find_calculations(filetext)
 
     if if_bfgs:
         for i, v in enumerate(split_text):
@@ -50,27 +51,27 @@ def file_parser(file):
             damage_simulation = False
             if kind == 'scf':
                 try:
-                    simulation.update(scf_complete(text))
-                except CorruptedData as e:
-                    logging.info(str(e))
-                    logging.info('energy recovered')
+                    simulation.update(parser.scf_complete(text))
+                except parser.CorruptedData as e:
+                    logger.info(str(e))
+                    logger.info('energy recovered')
                     simulation.update(e.parsed_data)
                     simulation['damage'] = True
                     damage_simulation = True
-                except EnergyError as e:
-                    logging.info(e)
+                except parser.EnergyError as e:
+                    logger.exception('Energy not found')
                     valid_simulation = False
             elif kind == 'bfgs':
                 try:
-                    simulation.update(bfgs_complete(text))
-                except CorruptedData as e:
-                    logging.info(str(e))
-                    logging.info('energy recovered')
+                    simulation.update(parser.bfgs_complete(text))
+                except parser.CorruptedData as e:
+                    logger.info(str(e))
+                    logger.info('energy recovered')
                     simulation.update(e.parsed_data)
                     simulation['damage'] = True
                     damage_simulation = True
-                except EnergyError as e:
-                    logging.info(e)
+                except parser.EnergyError as e:
+                    logger.info(e)
                     valid_simulation = False
             else:
                 raise ValueError('kind not implemented')
@@ -114,7 +115,7 @@ def file_parser(file):
                 simulations[previous_key]['next'] = key
 
     else:
-        logging.info('no bfgs calculation founded')
+        logger.info('no bfgs calculation founded')
         kind, text = split_text[0]
         key = hashlib.sha224(text.encode('utf-8')).hexdigest()
         simulations[key] = dict(file=str(file),
@@ -124,9 +125,9 @@ def file_parser(file):
         try:
             simulations[key].update(scf_complete(text))
         except CorruptedData as e:
-            logging.info(str(e) + '\n')
+            logger.info(str(e) + '\n')
             if 'total_energy' in e.parsed_data:
-                logging.info('energy recovered')
+                logger.info('energy recovered')
                 simulations[key].update(e.parsed_data)
                 simulations[key]['damage'] = True
     textfile.close()
@@ -134,4 +135,5 @@ def file_parser(file):
 
 
 if __name__ == '__main__':
-    s = file_parser('./new_test/output.09-05-2017.19.36.14')
+    logging.basicConfig(filename='./parse.log', level=logging.DEBUG)
+    s = file_parser('problematic_test/output.19-04-2017.14.50.08')
