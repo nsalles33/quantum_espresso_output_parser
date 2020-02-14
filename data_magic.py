@@ -2,8 +2,8 @@ import re
 import hashlib
 import logging
 
-from regexp import *
-import parser
+from QE_output_parser.regexp import *
+from QE_output_parser import parser
 logger = logging.getLogger(__name__)
 
 
@@ -123,8 +123,8 @@ def file_parser(file):
                                 last=key,
                                 number=(0, 0))
         try:
-            simulations[key].update(scf_complete(text))
-        except CorruptedData as e:
+            simulations[key].update(parser.scf_complete(text))
+        except parser.CorruptedData as e:
             logger.info(str(e) + '\n')
             if 'total_energy' in e.parsed_data:
                 logger.info('energy recovered')

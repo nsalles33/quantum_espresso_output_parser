@@ -1,6 +1,6 @@
 import re
 import logging
-from regexp import *
+from QE_output_parser.regexp import *
 
 logger = logging.getLogger(__name__)
 dump = logging.getLogger(__name__ + 'dump')
@@ -172,6 +172,7 @@ def scf_in(text, scf_out_feeder=False):
                                                     pseudo_name)
         else:
             raise ValueError('Inconsistency in QE output')
+
     if len(simulation['atom_description']) < int(simulation['nspecies']):
         dump.info('some atom are not well described')
         dump.debug(text)
@@ -186,6 +187,7 @@ def scf_in(text, scf_out_feeder=False):
 
     # normalization of atomic positions, this part should be done better
     # idea: force a division on work crystallographic axes
+
     crystal_text = re.split(scf_input_cryst['r_cryst_split_begin'],
                             text, flags=re.MULTILINE)[1]
     crystal_text = re.split(scf_input_cryst['r_cryst_split_end'],
@@ -193,6 +195,9 @@ def scf_in(text, scf_out_feeder=False):
     a_pos = re.findall(scf_input_cryst['r_apos'],
                        crystal_text,
                        re.MULTILINE)
+
+    #print("\n ...IN scf_in:")
+    #print(a_pos)
 
     # add apos_units, only crystal is supported
     simulation['apos_units'] = ['crystal']
@@ -227,6 +232,9 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
         else:
             simulation[x[2:]] = data
 
+    #print("\n... IN scf_out:")
+    #print("KEYS NOT FOUND::",keys_not_found)
+
     # the normalizations MUST BE DONE in the same order as the data are
     # collected becouse the first that fails will rise an error and all the
     # others wont be applied.
@@ -238,6 +246,7 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
     if 'force' not in keys_not_found:
         # no forces at all are available
         force = simulation.pop('force')[:nat]
+        #print("\n", force)
         # zip by doc cut the lenght of the result to the shorter.
         for x, y in zip(positions, force):
             if int(x[0]) == int(y[0]) and x[1] == atom_conversion[int(y[1])]:
@@ -266,6 +275,29 @@ def scf_out(text, nat, atom_conversion, positions, simulation={}):
         dump.debug(text)
         raise CorruptedData('no forces, damage data', simulation,
                             'forces')
+
+
+    # normalization of Electronic Polarization information
+    if 'pol_elec' in keys_not_found:
+        dump.info('Electronic Polarization not found')
+        dump.debug(text)
+        raise CorruptedData('pol_elec not found',simulation, 'pol_elec')
+
+    else:
+        for i in range(len(simulation['pol_elec'])-1):
+            simulation['pol_elec'].pop(0)
+
+
+    # normalization of Ionic Polarization information
+    if 'pol_ion' in keys_not_found:
+        dump.info('Ionic Polarization not found')
+        dump.debug(text)
+        raise CorruptedData('pol_ion not found',simulation, 'pol_ion')
+
+    else:
+        for i in range(len(simulation['pol_ion'])-1):
+            simulation['pol_ion'].pop(0)
+
 
     # normalization of stress and pressure information
     simulation['stress_tensor'] = []

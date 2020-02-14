@@ -1,7 +1,7 @@
 # util to regexp
 unit = r'((?:Ry|a\.?u\.?|(?:b|B)ohr|\/|(?:a|A)ng|kbar|g|cm|ev)+'\
        r'(?:\^|\*\*)?\d*)'
-atoms_name = r'(?:C|H|O|N)'
+atoms_name = r'(?:C|H|O|N|Si|Mg)'
 
 # qe info
 qe_info = dict(
@@ -14,6 +14,7 @@ scf_input = dict(
                       r' *read from file:\n^ *(.+\.UPF)$',
     r_bli=r'^ *bravais-lattice index *= *(\d+)',
     r_alat=r'^ *lattice parameter \(alat\) *= *([\d\.\+\-]+) *{}'.format(unit),
+    r_alat_prec=r'^ *celldm\(1\)= *([\d\.\+\-]+)', 
     r_unit_cell_volume=r'^ *unit-cell volume *= *([\d\.\+\-]+) *'
                        r'(\(a\.u\.\)\^3)',
     r_cell_side_units=r'^ *crystal axes: \(cart. coord. in units of (alat)\)',
@@ -30,11 +31,21 @@ scf_input = dict(
     r_threshold=r'^ *convergence threshold *= *(\d+.\d+E?-?\d*)',
     r_mixing=r'^ *mixing beta *= *([\d\.\+\-]+)')
 
+# -----------------------------------------------------------------------------
+# Ruggero version
+#scf_input_cryst = dict(
+#    r_cryst_split_begin=r'^ *Crystallographic axes',
+#    r_apos=r'^ +(\d+) +({})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
+#           '([\d\+\-\.]+) +\)'.format(atoms_name),
+#    r_cryst_split_end=r'^ *Dense  grid')
+
+# Nico Version
 scf_input_cryst = dict(
-    r_cryst_split_begin=r'^ *Crystallographic axes',
+    r_cryst_split_begin=r'^ *Cartesian axes',
     r_apos=r'^ +(\d+) +({})[^=]+= \( +([\d\+\-\.]+) +([\d\+\-\.]+) +'
            '([\d\+\-\.]+) +\)'.format(atoms_name),
     r_cryst_split_end=r'^ *Dense  grid')
+# -----------------------------------------------------------------------------
 
 # data of scf
 # TODO, the pressure calculation is carried out in different way
@@ -56,7 +67,12 @@ scf_output = dict(
     r_pressure=r'\((kbar)\) +P= +([\d\.\+\-]+)',
     r_stress_and_kbar_tensor=r'^ {2,3}([\d\.\+\-]+) +([\d\.\+\-]+) +'
                              r'([\d\.\+\-]+) {8,10}([\d\.\+\-]+) +'
-                             r'([\d\.\+\-]+) +([\d\.\+\-]+)$')
+                             r'([\d\.\+\-]+) +([\d\.\+\-]+)$',
+    #r_pol_elec=r'^Electronic Dipole on Cartesian axes *\n +([\d]) +([\d\.\+\-]+) *\n +([\d]) +([\d\.\+\-]+) *\n +([\d]) +([\d\.\+\-]+) *\n', #)
+    r_pol_elec=r'^Electronic Dipole on Cartesian axes *\n +([\d]) +([\d\.\+\-]+|-?\d+\.\d+[eE][+\-]?\d+) *\n +([\d]) +([\d\.\+\-]+|-?\d+\.\d+[eE][+\-]?\d+) *\n +([\d]) +([\d\.\+\-]+|-?\d+\.\d+[eE][+\-]?\d+) *\n', #)
+    r_pol_ion=r'^Ionic Dipole on Cartesian axes *\n +([\d]) +([\d\.\+\-]+) +\n +([\d]) +([\d\.\+\-]+) +\n +([\d]) +([\d\.\+\-]+) +\n')
+    #r_polarization=r'^Electronic Dipole on Cartesian axes *\n(( +([\d]) +([\d\.\+\-]+) +\n)*)' )
+
 
 # information of BFGS
 # obs:
