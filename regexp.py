@@ -68,10 +68,8 @@ scf_output = dict(
     r_stress_and_kbar_tensor=r'^ {2,3}([\d\.\+\-]+) +([\d\.\+\-]+) +'
                              r'([\d\.\+\-]+) {8,10}([\d\.\+\-]+) +'
                              r'([\d\.\+\-]+) +([\d\.\+\-]+)$',
-    #r_pol_elec=r'^Electronic Dipole on Cartesian axes *\n +([\d]) +([\d\.\+\-]+) *\n +([\d]) +([\d\.\+\-]+) *\n +([\d]) +([\d\.\+\-]+) *\n', #)
     r_pol_elec=r'^Electronic Dipole on Cartesian axes *\n +([\d]) +([\d\.\+\-]+|-?\d+\.\d+[eE][+\-]?\d+) *\n +([\d]) +([\d\.\+\-]+|-?\d+\.\d+[eE][+\-]?\d+) *\n +([\d]) +([\d\.\+\-]+|-?\d+\.\d+[eE][+\-]?\d+) *\n', #)
     r_pol_ion=r'^Ionic Dipole on Cartesian axes *\n +([\d]) +([\d\.\+\-]+) +\n +([\d]) +([\d\.\+\-]+) +\n +([\d]) +([\d\.\+\-]+) +\n')
-    #r_polarization=r'^Electronic Dipole on Cartesian axes *\n(( +([\d]) +([\d\.\+\-]+) +\n)*)' )
 
 
 # information of BFGS
